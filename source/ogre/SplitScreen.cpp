@@ -237,23 +237,24 @@ void SplitScreenManager::preViewportUpdate(const Ogre::RenderTargetViewportEvent
 		if(pApp->pSet->softparticles && pApp->pSet->all_effects)
 		{
 			MaterialFactory::getSingletonPtr()->setSoftParticles(true);
-			Ogre::CompositorInstance  *compositor= Ogre::CompositorManager::getSingleton().getCompositorChain(evt.source)->getCompositor("gbuffer");
-			if(compositor!=NULL)
-			{
-				Ogre::TexturePtr depthTexture =	compositor->getTextureInstance("mrt_output",2);
-				if(!depthTexture.isNull())
-				{
-					MaterialFactory::getSingletonPtr()->setDepthTexture(depthTexture);
-				}
-				Ogre::TexturePtr colorTexture = compositor->getTextureInstance("mrt_output",0);
-				if (!colorTexture.isNull())
-				{
-					MaterialFactory::getSingletonPtr()->setRefractionTexture(colorTexture);
-				}
-			}
 		}else
 			MaterialFactory::getSingletonPtr()->setSoftParticles(false);
-	}
+
+		Ogre::CompositorInstance  *compositor= Ogre::CompositorManager::getSingleton().getCompositorChain(evt.source)->getCompositor("gbuffer");
+		if(compositor!=NULL)
+		{
+			Ogre::TexturePtr depthTexture =	compositor->getTextureInstance("mrt_output",2);
+			if(!depthTexture.isNull())
+			{
+				MaterialFactory::getSingletonPtr()->setDepthTexture(depthTexture);
+			}
+			Ogre::TexturePtr colorTexture = compositor->getTextureInstance("mrt_output",0);
+			if (!colorTexture.isNull())
+			{
+				MaterialFactory::getSingletonPtr()->setRefractionTexture(colorTexture);
+			}
+		}
+}
 	else
 	{
 		//  Gui viewport - hide stuff we don't want
