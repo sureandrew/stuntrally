@@ -46,7 +46,11 @@ void WaterMaterialGenerator::generate()
 	pass->setCullingMode(CULL_NONE);
 	pass->setDepthWriteEnabled(true);
 	
+#ifndef ROAD_EDITOR
+	if (!mParent->getRefract() && !mParent->pApp->NeedMRTBuffer())
+#else
 	if (!mParent->getRefract())
+#endif
 		pass->setSceneBlending(SBT_TRANSPARENT_ALPHA);
 	
 	Ogre::TextureUnitState* tu;
@@ -64,7 +68,11 @@ void WaterMaterialGenerator::generate()
 		mTerrainLightTexUnit = mTexUnit_i; mTexUnit_i++;
 	}
 
+#ifndef ROAD_EDITOR
+	if (mParent->getRefract() || mParent->pApp->NeedMRTBuffer())
+#else
 	if (mParent->getRefract())
+#endif
 	{
 		tu = pass->createTextureUnitState( "PlaneRefraction" );
 		tu->setName("refractionMap");
@@ -102,10 +110,20 @@ void WaterMaterialGenerator::generate()
 	}
 	
 	//  waterDepth
-	tu = pass->createTextureUnitState( "waterDepth.png" );
+	tu = pass->createTextureUnitState( "" );
 	tu->setName("depthMap");
-	tu->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
-	tu->setTextureBorderColour(ColourValue::White);  // outside tex water always visible
+#ifndef ROAD_EDITOR
+	if (mParent->pApp->NeedMRTBuffer()) {
+#else
+	if (0) {
+#endif
+		tu->setTextureAddressingMode(TextureUnitState::TAM_CLAMP);
+	}
+	else
+	{
+		tu->setTextureAddressingMode(TextureUnitState::TAM_BORDER);
+		tu->setTextureBorderColour(ColourValue::White);  // outside tex water always visible
+	}
 	mWaterDepthUnit = mTexUnit_i;  mTexUnit_i++;
 	
 	
@@ -147,6 +165,7 @@ void WaterMaterialGenerator::generate()
 
 	// indicate we need 'time' parameter set every frame
 	mParent->timeMtrs.push_back(mDef->getName());
+	mParent->softMtrs.push_back(mDef->getName());
 	/*
 	if (mDef->getName() == "Grease_jelly")
 	{
@@ -280,9 +299,7 @@ HighLevelGpuProgramPtr WaterMaterialGenerator::createVertexProgram()
 //----------------------------------------------------------------------------------------
 
 void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStreamType& outStream)
-{
-	//!todo correct lighting - diffuse, ambient, global ambient?
-	
+{	
 	mTexCoord_i = 5;
 	
 	if (needShadows())
@@ -308,12 +325,15 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 	
 	fpShadowingParams(outStream);
 	
-	// for some reason the projective coords are y-flipped when any compositor is activated
-	// as a workaround, set this parameter to 1 when there are compositors enabled, otherwise 0
 	if (mParent->getRefract() || mParent->getReflect()) outStream <<
 		"	uniform float inverseProjection, \n"; 
 	
-	if (MaterialFactory::getSingleton().getRefract()) outStream <<
+#ifndef ROAD_EDITOR
+	if (mParent->getRefract() || mParent->pApp->NeedMRTBuffer())
+#else
+	if (mParent->getRefract())
+#endif
+		outStream <<
 		"	uniform sampler2D refractionMap : TEXUNIT"+toStr(mScreenRefrUnit)+", \n";
 	
 	if (MaterialFactory::getSingleton().getReflect()) outStream <<
@@ -353,7 +373,19 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 	"	uniform float4 shallowColor, \n"
 	"	uniform float4 reflectionColor, \n"
 	//	fresnel power and bias
-	"	uniform float2 fresnelPowerBias, \n"
+	"	uniform float2 fresnelPowerBias, \n";
+
+#ifndef ROAD_EDITOR
+if (mParent->pApp->NeedMRTBuffer())
+{
+#endif
+	outStream <<
+	"	uniform float far, \n";
+#ifndef ROAD_EDITOR
+}
+#endif
+
+	outStream <<
 
 	//	reflVal - reflClr to waterClr amout
 	//	Refl2 - 2d screen reflection amout (lerp to 3d)
@@ -364,11 +396,13 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 	"): COLOR0 \n"
 	"{ \n";
 
-	//  depthMap for alpha near terrain and deep water
-	outStream <<
-	"	float2 uva = float2(IN.wp.z * -invTerSize + 0.5f, IN.wp.x * invTerSize + 0.5f); \n"
-	"	float2 aa = tex2D(depthMap, uva).rg; \n"
-	"	discard(aa.r < 0.01f); \n";  // this is water inside terrain no need to render
+	if (mParent->getRefract() || mParent->getReflect())
+	{
+		outStream <<
+		"	float4 projCoord = float4(IN.n.w, IN.t.w, 1, IN.b.w); \n"
+		"	float2 projUV = projCoord.xy / projCoord.w; \n"
+		"	if (inverseProjection == -1)  projUV.y = 1-projUV.y; \n";
+	}
 		
 	if (needTerrainLightMap()) outStream <<
 		"	float4 wsNormal = float4(1.0, 1.0, 1.0, IN.wp.x); \n"
@@ -391,7 +425,36 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 	"		(tex2D(normalMap, IN.uv.xy*8 - uw1).rgb * 2.0 - 1.0) * w1 + \n"
 	"		(tex2D(normalMap, IN.uv.xy*2 + uv1).rgb * 2.0 - 1.0) * w2 + \n"
 	"		(tex2D(normalMap, IN.uv.xy*2 + uv2).rgb * 2.0 - 1.0) * w2); \n"
-	"	normalTex = lerp(normalTex, float3(0,0,1), waveBump_Speed_HighFreq_Spec.x); \n"
+	"	normalTex = lerp(normalTex, float3(0,0,1), waveBump_Speed_HighFreq_Spec.x); \n";
+
+	if (mParent->getReflect() || mParent->getRefract()) outStream <<
+		"	float2 projUV_refra = projUV; \n"
+		"	projUV += normalTex.yx * reflVal_Refl2_Distort_Opacity.z; \n"
+		"	projUV_refra += normalTex.yx * max(0, reflVal_Refl2_Distort_Opacity.z); \n";
+
+#ifndef ROAD_EDITOR
+if (!mParent->pApp->NeedMRTBuffer())
+{
+#endif
+	//  depthMap for alpha near terrain and deep water
+	outStream <<
+	"	float2 uva = float2(IN.wp.z * -invTerSize + 0.5f, IN.wp.x * invTerSize + 0.5f); \n"
+	"	float2 aa = tex2D(depthMap, uva).rg; \n"
+	"	discard(aa.r < 0.01f); \n";  // this is water inside terrain no need to render
+#ifndef ROAD_EDITOR
+}
+else
+{
+	outStream << "float2 aa = float2(1,1); \n";
+	outStream <<
+	"	float screendepth = tex2D(depthMap, projUV_refra).r; \n"
+	"	aa.g = (screendepth * far - IN.uv.z) / 100.f; \n"
+	"	aa.r = saturate(aa.g * 50); \n"
+	"	aa.g = saturate(aa.g); \n";
+}
+#endif
+
+outStream <<
 
 		//  normal to object space
 	"	float3x3 tbn = float3x3(IN.t.xyz, IN.b.xyz, IN.n.xyz); \n"
@@ -411,18 +474,11 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 		"	float3 diffC = lightDiff.xyz; \n"
 		"	float3 specC = specular * waveBump_Speed_HighFreq_Spec.w * lightSpec0 * matSpec.rgb; \n";
 	
-	if (mParent->getRefract() || mParent->getReflect())
-	{
-		outStream <<
-		"	float4 projCoord = float4(IN.n.w, IN.t.w, 1, IN.b.w); \n"
-		"	float2 projUV = projCoord.xy / projCoord.w; \n"
-		"	if (inverseProjection == -1)  projUV.y = 1-projUV.y; \n"
-		"	float2 projUV_refra = projUV; \n"
-		"	projUV += normalTex.yx * reflVal_Refl2_Distort_Opacity.z; \n"
-		"	projUV_refra += normalTex.yx * max(0, reflVal_Refl2_Distort_Opacity.z); \n";
-	}
-	
+#ifndef ROAD_EDITOR
+	if (mParent->getRefract() || mParent->pApp->NeedMRTBuffer())
+#else
 	if (mParent->getRefract())
+#endif
 		outStream <<
 		"	float4 refraction = tex2D(refractionMap, projUV_refra); \n";
 	
@@ -459,11 +515,19 @@ void WaterMaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::Str
 	
 	outStream <<
 	"	float alpha = saturate(aa.g * depthPars.y + aa.r * (waterClr.a + specC.r)); \n";
-	if (mParent->getRefract())  outStream << 
+
+#ifndef ROAD_EDITOR
+	if (mParent->getRefract() || mParent->pApp->NeedMRTBuffer())
+#else
+	if (mParent->getRefract())
+#endif
+		outStream << 
 		"	clr = lerp(refraction, clr, alpha * reflVal_Refl2_Distort_Opacity.w); \n";
 		
 	outStream <<
 		"	return float4(clr, alpha); \n";
+		//"	return float4(aa.g, aa.g, aa.g, 1); \n";
+		//"	return float4(realdepth); \n";
 	
 	outStream <<
 	"} \n";
@@ -488,6 +552,7 @@ void WaterMaterialGenerator::fragmentProgramParams(Ogre::HighLevelGpuProgramPtr 
 	params->setNamedAutoConstant("ambient", GpuProgramParameters::ACT_AMBIENT_LIGHT_COLOUR);
 	params->setNamedAutoConstant("lightDiff", GpuProgramParameters::ACT_LIGHT_DIFFUSE_COLOUR, 0);
 	params->setNamedAutoConstant("inverseProjection", GpuProgramParameters::ACT_RENDER_TARGET_FLIPPING);
+	params->setNamedAutoConstant("far", GpuProgramParameters::ACT_FAR_CLIP_DISTANCE);
 	params->setNamedConstantFromTime("time", 1);
 	individualFragmentProgramParams(params);
 }

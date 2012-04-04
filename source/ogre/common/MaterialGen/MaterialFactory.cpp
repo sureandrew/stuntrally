@@ -219,7 +219,7 @@ void MaterialFactory::setWind(bool wind)
 
 //----------------------------------------------------------------------------------------
 
-void MaterialFactory::setSoftParticleDepth(TexturePtr depthtexture)
+void MaterialFactory::setDepthTexture(TexturePtr depthtexture)
 {
 	if(MaterialGenerator::MRTSupported())
 	{
@@ -228,6 +228,23 @@ void MaterialFactory::setSoftParticleDepth(TexturePtr depthtexture)
 		{
 			MaterialPtr mat = MaterialManager::getSingleton().getByName( (*it) );
 			TextureUnitState* tus =mat->getTechnique(0)->getPass(0)->getTextureUnitState("depthMap");
+			tus->setTextureName(depthtexture->getName());
+		}
+	}
+}
+
+//----------------------------------------------------------------------------------------
+
+void MaterialFactory::setRefractionTexture(TexturePtr depthtexture)
+{
+	if(MaterialGenerator::MRTSupported())
+	{
+		for (std::vector<std::string>::iterator it=softMtrs.begin();
+			it != softMtrs.end(); ++it)
+		{
+			MaterialPtr mat = MaterialManager::getSingleton().getByName( (*it) );
+			TextureUnitState* tus =mat->getTechnique(0)->getPass(0)->getTextureUnitState("refractionMap");
+			if (tus == 0) continue;
 			tus->setTextureName(depthtexture->getName());
 		}
 	}
@@ -246,6 +263,7 @@ void MaterialFactory::setSoftParticles(bool bEnable)
 			if (mat->getTechnique(0)->getPass(0)->hasFragmentProgram())
 			{
 				GpuProgramParametersSharedPtr vparams = mat->getTechnique(0)->getPass(0)->getFragmentProgramParameters();
+				if (vparams->_findNamedConstantDefinition("useSoftParticles"))
 				vparams->setNamedConstant("useSoftParticles", bEnable ? 1.0f: -1.0f);
 			}
 		}

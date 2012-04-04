@@ -243,7 +243,12 @@ void SplitScreenManager::preViewportUpdate(const Ogre::RenderTargetViewportEvent
 				Ogre::TexturePtr depthTexture =	compositor->getTextureInstance("mrt_output",2);
 				if(!depthTexture.isNull())
 				{
-					MaterialFactory::getSingletonPtr()->setSoftParticleDepth(depthTexture);
+					MaterialFactory::getSingletonPtr()->setDepthTexture(depthTexture);
+				}
+				Ogre::TexturePtr colorTexture = compositor->getTextureInstance("mrt_output",0);
+				if (!colorTexture.isNull())
+				{
+					MaterialFactory::getSingletonPtr()->setRefractionTexture(colorTexture);
 				}
 			}
 		}else

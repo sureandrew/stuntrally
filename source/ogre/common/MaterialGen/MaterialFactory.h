@@ -59,7 +59,8 @@ public:
 	/// settings that can change runtime
 	void setFog(bool fog);
 	void setWind(bool wind);
-	void setSoftParticleDepth(Ogre::TexturePtr depthtexture);
+	void setDepthTexture(Ogre::TexturePtr depthtexture);
+	void setRefractionTexture(Ogre::TexturePtr depthtexture);
 	void setSoftParticles(bool bEnable);
 	void setShadowsEnabled(bool bEnable);
 	
