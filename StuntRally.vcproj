@@ -651,6 +651,14 @@
 				Name="main"
 				>
 				<File
+					RelativePath=".\source\vdrift\inf.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\source\vdrift\ini.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\ogre\main.cpp"
 					>
 				</File>
@@ -684,6 +692,18 @@
 				</File>
 				<File
 					RelativePath=".\source\ogre\pch.h"
+					>
+				</File>
+				<File
+					RelativePath=".\source\vdrift\ptree.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\source\vdrift\ptree.h"
+					>
+				</File>
+				<File
+					RelativePath=".\source\vdrift\xml.cpp"
 					>
 				</File>
 			</Filter>
