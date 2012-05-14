@@ -17,10 +17,10 @@ MaterialProperties::MaterialProperties() :
 	ambient(1.0, 1.0, 1.0), diffuse(1.0, 1.0, 1.0), specular(0.0, 0.0, 0.0, 0.0),
 	depthBias(0), depthCheck(true), transparentSorting(true), lightingAlpha(0.0, 0.0, 0.0, 0.0),
 	sceneBlend(SBM_DEFAULT), depthWrite(true), alphaRejectFunc(CMPF_ALWAYS_PASS), alphaRejectValue(0.0),
-	fog(true), lighting(true), textureAddressMode(TextureUnitState::TAM_WRAP),
+	fog(true), lighting(true), textureAddressMode(TextureUnitState::TAM_WRAP), ward(false), //-------- no ward by default
 	terrainLightMap(false), ssao(true), ssaoReject(false), customGenerator(""), wind(0), vertexColour(false),
 	waveBump_Speed_HighFreq_Spec(0.5, 1.0, 0.0, 1.0), reflVal_Refl2_Distort_Opacity(1, 1, 0.1, 1),
-	envMapPriority(0.5), shadowPriority(0.5), normalMapPriority(0.5),
+	envMapPriority(0.5), shadowPriority(0.5), normalMapPriority(0.5), aniso_roughness(1.0, 1.0), //-------- 
 	deepColour(0.0, 0.3, 0.5, 1.0), shallowColour(0.0, 0.9, 1.0, 0.3), reflectionColour(0.9, 1.0, 1.0, 1.0),
 	depthColour(0.0, 0.15, 0.3, 1.0), depthPars(0.1f,0.1f,0.1f),
 	parallax(false), parallaxHeight(0.035f)
@@ -95,6 +95,8 @@ void MaterialProperties::setProperty(const std::string& prop, const std::string&
 	else if (prop == "ssao") ssao = str2bool(value);
 	else if (prop == "terrainLightMap") terrainLightMap = str2bool(value);
 	else if (prop == "lighting") lighting = str2bool(value);
+  else if (prop == "ward") ward = str2bool(value); //-------- this grabs the bool from the material file
+  else if (prop == "aniso_roughness") aniso_roughness = str2vec2(value);
 	else if (prop == "fog") fog = str2bool(value);
 	else if (prop == "alphaRejectValue") alphaRejectValue = str2float(value);
 	else if (prop == "depthWrite") depthWrite = str2bool(value);

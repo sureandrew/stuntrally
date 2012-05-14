@@ -115,6 +115,7 @@ protected:
 	virtual bool fpNeedPos();
 	virtual bool fpNeedNormal();
 	virtual bool fpNeedEyeVector();
+  virtual bool fp_need_ward(); //--------
 	 
 	//MRT
 	virtual bool vpNeedWvMat();

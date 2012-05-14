@@ -28,6 +28,7 @@ ShaderProperties::ShaderProperties( MaterialProperties* props, MaterialFactory* 
 		&& (1-props->normalMapPriority <= parent->getShaderQuality());
 	parallax = props->parallax && parent->getShaderQuality() > 0.6;
 	lighting = props->lighting;
+  ward = props->ward; //-------- assign value of material property
 	shadows = ( (props->receivesShadows && parent->getShadows()) 
 			||  (props->receivesDepthShadows && parent->getShadowsDepth())
 			  ) && (1-props->shadowPriority <= parent->getShaderQuality());
@@ -54,6 +55,7 @@ bool ShaderProperties::isEqual( ShaderProperties* other )
 	if (other->shadows != shadows) return false;
 	if (other->transparent != transparent) return false;
 	if (other->lighting != lighting) return false;
+	if (other->ward != ward) return false;
 	if (other->lightingAlpha != lightingAlpha) return false;
 	if (other->customGenerator != customGenerator) return false;
 	if (other->wind != wind) return false;

@@ -16,6 +16,7 @@ struct ShaderProperties
 	bool normalMap;
 	bool parallax;
 	bool lighting;
+  bool ward; //-------- enable ward lighting
 	bool shadows;
 	bool transparent; bool lightingAlpha; // transparency
 	unsigned int wind;

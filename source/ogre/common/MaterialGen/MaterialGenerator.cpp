@@ -148,19 +148,25 @@ void MaterialGenerator::generate()
 	/**/
 	
 	/// uncomment to see full shader source code in log
+	
 	/**
-	LogO(mDef->getName());
-	if (StringUtil::startsWith(mDef->getName(), "FluidWater" ))  //"water" //_cyan"
+  //LogO(mDef->getName());
+  std::cout << mDef->getName() << "\n";
+	if (StringUtil::startsWith(mDef->getName(), "car_body" ))  //"water" //_cyan"
 	{
-		LogO("[MaterialFactory] Vertex program source: ");
+		//LogO("[MaterialFactory] Vertex program source: ");
+    std::cout << "[MaterialFactory] Vertex program source: " << "\n";
 		StringUtil::StrStreamType vSourceStr;
 		generateVertexProgramSource(vSourceStr);
-		LogO(vSourceStr.str());
-		LogO("[MaterialFactory] Fragment program source: ");
+		//LogO(vSourceStr.str());
+    std::cout << vSourceStr.str() << "\n";
+		//LogO("[MaterialFactory] Fragment program source: ");
+    std::cout << "[MaterialFactory] Fragment program source: " << "\n";
 		StringUtil::StrStreamType fSourceStr;
 		generateFragmentProgramSource(fSourceStr);
-		LogO(fSourceStr.str());
-	}
+		//LogO(fSourceStr.str());
+    std::cout << fSourceStr.str() << "\n";
+  }
 	/**/
 }
 
@@ -469,6 +475,11 @@ bool MaterialGenerator::fpNeedLighting()
 bool MaterialGenerator::fpNeedNormal()
 {
 	return (needEnvMap() || needNormalMap() || fpNeedLighting() || needTerrainLightMap());
+}
+
+bool MaterialGenerator::fp_need_ward() //--------
+{
+  return mShader->ward;
 }
 
 bool MaterialGenerator::fpNeedEyeVector()
