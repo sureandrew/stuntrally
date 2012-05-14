@@ -526,21 +526,23 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream << 
       " if(n_dot_l > 0.0) \n"
       " { \n"
-      "   float3 epsilon = float3( 1.0f, 0.0f, 0.0f ); \n"
-      "   float3 ntangent = normalize( cross( normal, epsilon ) ); \n"
-      "   float3 nbitangent = normalize( cross( normal, ntangent ) ); \n"
+      "   float3 nbitangent = normalize( cross( normal, tangent.xyz ) ); \n"
       "   float n_dot_v = dot(normal, eyeVector); \n" //-------- N dot V 
-      "   float h_dot_t = dot(half, ntangent); \n" //-------- H dot T
+      "   float h_dot_t = dot(half, normalize(tangent.xyz)); \n" //-------- H dot T
       "   float h_dot_b = dot(half, nbitangent); \n" //-------- H dot B
-      "   aniso_roughness += float2( 1e-5f, 1e-5f ); \n" //-------- no division by 0
+      // TODO: need to include that shininess somewhere...
+      "   float2 roughness = aniso_roughness + float2( 1e-5f, 1e-5f ); \n" //-------- no division by 0
 
-      /*"   float beta_a = h_dot_t / aniso_roughness.x; \n" //-------- beta a 
-      "   float beta_b = h_dot_b / aniso_roughness.y; \n" //-------- beta b
+      /*"   float beta_a = h_dot_t / roughness.x; \n" //-------- beta a 
+      "   float beta_b = h_dot_b / roughness.y; \n" //-------- beta b
       "   float beta = -2.0f * ( ( beta_a * beta_a + beta_b * beta_b ) / ( 1.0f + n_dot_h ) ); \n" //-------- beta*/
-      "   vec2 coeff = vec2(h_dot_t, h_dot_b) / (aniso_roughness * shininess); \n"
+      //this is an optimized version of the above
+      "   float2 coeff = float2(h_dot_t, h_dot_b) / roughness; \n"
       "   float beta = -2.0f * ( dot(coeff, coeff) / ( 1.0f + n_dot_h ) ); \n" //-------- beta
 
-      "   result += diffuse + lightSpecular.xyz * matSpec * exp(beta) * sqrt(max(n_dot_l / n_dot_v, 0)); \n" //--------
+      "   float denom = 1.0f / (4.0f * 3.14159f * roughness.x * roughness.y * sqrt( n_dot_l * n_dot_v )); \n"
+      "   result += diffuse + lightSpecular.xyz * matSpec * exp(beta) * denom * n_dot_l; \n" //--------
+      //"   result += lightSpecular.xyz * matSpec * exp(beta) * denom * n_dot_l; \n" //--------
       " } \n";
     }
     else
@@ -555,6 +557,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		  "	  if (diffuseLight <= 0) specularLight = 0; \n"
 		  "	  float3 specular = matSpec.xyz * lightSpecular.xyz * specularLight; \n"
       "   result += diffuse + specular; \n"
+      //"   result += specular; \n"
       " } \n";
     }
 
@@ -566,10 +569,12 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		// add all terms together (also with shadow)
 		if (needShadows() || needTerrainLightMap()) outStream <<
 		//"	float3 lightColour = ambient + diffuse*shadowing + specular*shadowing; \n";
-    "	float3 lightColour = ambient + result * shadowing; \n"; //-------- 
+    "	float3 lightColour = ambient + result * shadowing; \n"; //--------
+    //"	float3 lightColour = result * shadowing; \n"; //--------  
 		else outStream <<
 		//"	float3 lightColour = ambient + diffuse + specular; \n";
-    "	float3 lightColour = ambient + result; \n"; //-------- 
+    "	float3 lightColour = ambient + result; \n"; //--------
+    //"	float3 lightColour = result; \n"; //--------  
 	}
 	
 	// cube reflection
@@ -616,6 +621,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	// add fog
 	outStream <<
 		"	oColor = lerp(color1, float4(fogColor,1), fogAmount); \n";
+    //" oColor = float4(lightColour, 1); \n";
 	
 	// debug colour output  ------------------------------------------
 	
