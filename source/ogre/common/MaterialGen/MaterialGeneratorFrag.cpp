@@ -566,7 +566,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		// add all terms together (also with shadow)
 		if (needShadows() || needTerrainLightMap()) outStream <<
 		//"	float3 lightColour = ambient + diffuse*shadowing + specular*shadowing; \n";
-    "	float3 lightColour = result * shadowing; \n"; //-------- 
+    "	float3 lightColour = ambient + result * shadowing; \n"; //-------- 
 		else outStream <<
 		//"	float3 lightColour = ambient + diffuse + specular; \n";
     "	float3 lightColour = ambient + result; \n"; //-------- 
