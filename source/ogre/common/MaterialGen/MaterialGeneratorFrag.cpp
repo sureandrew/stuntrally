@@ -526,7 +526,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream << 
       " if(n_dot_l > 0.0) \n"
       " { \n"
-      "   float3 nbitangent = normalize( cross( normal, tangent.xyz ) ); \n"
+      "   float3 nbitangent = normalize( cross( tangent.xyz, normal ) ); \n"
       "   float n_dot_v = dot(normal, eyeVector); \n" //-------- N dot V 
       "   float h_dot_t = dot(half, normalize(tangent.xyz)); \n" //-------- H dot T
       "   float h_dot_b = dot(half, nbitangent); \n" //-------- H dot B
