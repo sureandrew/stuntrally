@@ -661,12 +661,12 @@ void SplineRoad::RebuildRoadInt()
 					for (int w=0; w < iwW; ++w)  // width
 					{
 						int f = iiW + w, f1 = f + (iwW+1);
-						idx.push_back(f+0);  idx.push_back(f1+1);  idx.push_back(f+1);
-						idx.push_back(f+0);  idx.push_back(f1+0);  idx.push_back(f1+1);
+						idx.push_back(f+1);  idx.push_back(f1+1);  idx.push_back(f+0);
+						idx.push_back(f1+1);  idx.push_back(f1+0);  idx.push_back(f+0);
 					}	}
 					
 					//  front plates start,end
-					const int Wid[4/*6*/][3] = {{0,1,2},{0,2,3},{7,4,5},{7,5,6}/*,{0,3,7},{7,3,4}*/};
+					const int Wid[4/*6*/][3] = {{2,1,0},{3,2,0},{5,4,7},{6,5,7}/*,{7,3,0},{4,3,7}*/};
 					int i,f, b = posW.size()-iwW-1;
 					if (!isPipe(seg))  //  no fronts in pipes
 					for (f=0; f < 4; ++f)
@@ -710,8 +710,8 @@ void SplineRoad::RebuildRoadInt()
 				Entity* ent = 0, *entW = 0, *entC = 0;
 				SceneNode* node = 0, *nodeW = 0, *nodeC = 0;
 					AddMesh(mesh, sMesh, aabox, &ent, &node, "."+sEnd);
-				if (wPglass) {
-					ent->setRenderQueueGroup(RQG_PipeGlass);
+				if (wPglass)
+				{	ent->setRenderQueueGroup(RQG_PipeGlass);
 					//ent->setCastShadows(true);
 				}
 				if (wall /*&& !posW.empty()*/)
@@ -724,8 +724,8 @@ void SplineRoad::RebuildRoadInt()
 					if (bCastShadow)
 						entC->setCastShadows(true);
 				}
-				//if (bForceShadowCaster)
-					//ent->setCastShadows(true);
+				if (bCastShadow && !onTer)
+					ent->setCastShadows(true);
 
 				
 				/**/
@@ -797,7 +797,7 @@ void SplineRoad::RebuildRoadInt()
 						for (int i = 0; i < iLmrgW-1; ++i)  // length
 						{	int iiW = i* (iwW+1);
 						for (int w=0; w < iwW; ++w)  // width
-						if (w==0 || w == iwW-1)  // only 2 sides|_| optym+
+						if (bRoadWFullCol || w==0 || w == iwW-1)  // only 2 sides|_| optym+
 						{
 							int f = iiW + w, f1 = f + (iwW+1);
 							addTriB(posW[f+0], posW[f1+1], posW[f+1]);
@@ -805,7 +805,7 @@ void SplineRoad::RebuildRoadInt()
 						}	}
 						
 						btCollisionShape* shape = new btBvhTriangleMeshShape(trimesh, true);
-						shape->setUserPointer((void*)7777);  //-
+						shape->setUserPointer((void*)7777);  //-  + road mtr id todo...
 						
 						//btRigidBody::btRigidBodyConstructionInfo infoW(0.f, 0, shape);
 						//infoW.m_restitution = 0.0f;
