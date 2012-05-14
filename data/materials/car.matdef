@@ -16,6 +16,8 @@
 	shadowPriority = 1.0
 	envMapPriority = 0.9
 	normalMapPriority = 0.9
+	ward = true
+	aniso_roughness = 0.2 0.4
 	
 [car_glass]
 	customGenerator = Glass
@@ -79,8 +81,6 @@
 	normalMap_1024 = normal.png
 	specMap_1024 = spec.png
 	ssao = false
-  ward = true
-  aniso_roughness = 0.2 0.4
 	
 [car_interior_ES]
 	parent = car_interior

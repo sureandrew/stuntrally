@@ -778,7 +778,10 @@ void MaterialGenerator::individualFragmentProgramParams(Ogre::GpuProgramParamete
 		
 	if (mShader->parallax)
 		params->setNamedConstant("parallaxHeight", mDef->mProps->parallaxHeight);
-	
+
+	if (mShader->ward)
+		params->setNamedConstant("aniso_roughness", Vector4(mDef->mProps->aniso_roughness[0], mDef->mProps->aniso_roughness[1], 0, 0));
+
 	if (needShadows())
 	{
 		params->setNamedConstant("enableShadows", 1.f);
