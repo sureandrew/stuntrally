@@ -72,7 +72,7 @@ struct MaterialProperties
 	bool lighting; // enable lighting
 
   bool ward; //-------- enable ward lighting
-  Ogre::Vector2 aniso_roughness; //-------- determines the shape of the specular highlight. Needs to be in range ([0...1], [0...1])
+  //Ogre::Vector2 aniso_roughness; //-------- determines the shape of the specular highlight. Needs to be in range ([0...1], [0...1])
 	
 	// contribute to ssao yes/no
 	bool ssao;

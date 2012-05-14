@@ -17,7 +17,7 @@
 	envMapPriority = 0.9
 	normalMapPriority = 0.9
 	ward = true
-	aniso_roughness = 0.2 0.4
+	;aniso_roughness = 0.2 0.2
 	
 [car_glass]
 	customGenerator = Glass

@@ -408,8 +408,8 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		"	uniform float3 matDiffuse, \n";
 		if (!needSpecMap()) outStream <<
 		"	uniform float4 matSpecular, \n"; // shininess in w
-    if(fp_need_ward()) //--------
-      outStream << "	uniform float2 aniso_roughness, \n";
+    /*if(fp_need_ward()) //--------
+      outStream << "	uniform float2 aniso_roughness, \n";*/
 	}
 	outStream <<
 		"	uniform float3 fogColor, \n";
@@ -518,7 +518,6 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 
     outStream << 
     " float3 result = float3(0); \n" //-------- this will contain the lighting result
-    " float n_dot_h = dot(normal, half); \n" //-------- N dot H;
     " float n_dot_l = diffuseLight; \n"; //-------- N dot L
 
     if(fp_need_ward()) //--------
@@ -526,23 +525,16 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream << 
       " if(n_dot_l > 0.0) \n"
       " { \n"
-      "   float3 nbitangent = normalize( cross( tangent.xyz, normal ) ); \n"
-      "   float n_dot_v = dot(normal, eyeVector); \n" //-------- N dot V 
-      "   float h_dot_t = dot(half, normalize(tangent.xyz)); \n" //-------- H dot T
-      "   float h_dot_b = dot(half, nbitangent); \n" //-------- H dot B
+      "   float n_dot_h = dot(normal, half); \n" //-------- N dot H;
+      "   float n_dot_v = dot(normal.xyz, eyeVector); \n" //-------- N dot V 
       // TODO: need to include that shininess somewhere...
-      "   float2 roughness = aniso_roughness + float2( 1e-5f, 1e-5f ); \n" //-------- no division by 0
-
-      /*"   float beta_a = h_dot_t / roughness.x; \n" //-------- beta a 
-      "   float beta_b = h_dot_b / roughness.y; \n" //-------- beta b
-      "   float beta = -2.0f * ( ( beta_a * beta_a + beta_b * beta_b ) / ( 1.0f + n_dot_h ) ); \n" //-------- beta*/
-      //this is an optimized version of the above
-      "   float2 coeff = float2(h_dot_t, h_dot_b) / roughness; \n"
-      "   float beta = -2.0f * ( dot(coeff, coeff) / ( 1.0f + n_dot_h ) ); \n" //-------- beta
-
-      "   float denom = 1.0f / (4.0f * 3.14159f * roughness.x * roughness.y * sqrt( n_dot_l * n_dot_v )); \n"
-      "   result += diffuse + lightSpecular.xyz * matSpec * exp(beta) * denom * n_dot_l; \n" //--------
-      //"   result += lightSpecular.xyz * matSpec * exp(beta) * denom * n_dot_l; \n" //--------
+      "   shininess /= 255; \n"
+      "   float roughness_sq = shininess * shininess + 0.00001f; \n" //-------- no division by 0
+      "   float exp_a = -pow(tan(acos(n_dot_h)), 2.0f); \n"
+      "   float numer = exp(exp_a / roughness_sq); \n"
+      "   float denom = 1.0f / (4.0f * 3.14159f * roughness_sq * sqrt( n_dot_l * n_dot_v )); \n"      
+      "   result += diffuse + lightSpecular.xyz * matSpec * numer * denom * n_dot_l; \n" //--------
+      //"   result += lightSpecular.xyz * matSpec * numer * denom * n_dot_l; \n" //--------
       " } \n";
     }
     else
@@ -550,8 +542,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream << 
       " if(n_dot_l > 0.0) \n"
       " { \n"
-		  //"	  float specularLight = pow(max(dot(normal, half), 0), shininess); \n"
-      "	  float specularLight = pow(n_dot_h, shininess); \n" //-------- 
+		  "	  float specularLight = pow(dot(normal, half), shininess); \n"
 
 		  "	  if (matSpec.x == 0 && matSpec.y == 0 && matSpec.z == 0) specularLight = 0; \n"
 		  "	  if (diffuseLight <= 0) specularLight = 0; \n"
@@ -570,11 +561,11 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		if (needShadows() || needTerrainLightMap()) outStream <<
 		//"	float3 lightColour = ambient + diffuse*shadowing + specular*shadowing; \n";
     "	float3 lightColour = ambient + result * shadowing; \n"; //--------
-    //"	float3 lightColour = result * shadowing; \n"; //--------  
+    //"	float3 lightColour = result * shadowing; \n"; //--------
 		else outStream <<
 		//"	float3 lightColour = ambient + diffuse + specular; \n";
     "	float3 lightColour = ambient + result; \n"; //--------
-    //"	float3 lightColour = result; \n"; //--------  
+    //"	float3 lightColour = result; \n"; //--------
 	}
 	
 	// cube reflection
@@ -785,8 +776,8 @@ void MaterialGenerator::individualFragmentProgramParams(Ogre::GpuProgramParamete
 	if (mShader->parallax)
 		params->setNamedConstant("parallaxHeight", mDef->mProps->parallaxHeight);
 
-	if (mShader->ward)
-		params->setNamedConstant("aniso_roughness", Vector4(mDef->mProps->aniso_roughness[0], mDef->mProps->aniso_roughness[1], 0, 0));
+	/*if (mShader->ward)
+		params->setNamedConstant("aniso_roughness", Vector4(mDef->mProps->aniso_roughness[0], mDef->mProps->aniso_roughness[1], 0, 0));*/
 
 	if (needShadows())
 	{
