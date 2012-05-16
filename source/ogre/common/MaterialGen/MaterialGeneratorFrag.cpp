@@ -519,7 +519,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		outStream <<	
 		// compute the diffuse term
 		"	float3 l = normalize( lightPosition.xyz ); \n"
-		"	float n_dot_l = dot( n, l ); \n"; // N dot L
+		"	float n_dot_l = max( dot( n, l ), 0.0f ); \n"; // N dot L
 		
 		if ((needLightMap() && needBlendMap())) 
     {
@@ -543,13 +543,13 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
 			"	float4 specTex = tex2D( specMap, texCoord.xy ); \n"
 			"	float3 matSpec = specTex.xyz; \n"
-			"	float shininess = specTex.w*255; \n";
+			"	float shininess = specTex.w; \n";
     }
 		else 
     {
       outStream <<
 			"	float3 matSpec = matSpecular.xyz; \n"
-			"	float shininess = matSpecular.w; \n";
+			"	float shininess = matSpecular.w / 255.0f; \n";
     }
 
     outStream << 
@@ -560,7 +560,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
     {
       outStream << 
       "    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( n - iNormal.xyz ).yzx ) ); \n"
-      "    float3 b = cross( t, n ); \n";
+      "    float3 b = normalize( cross( t, n ) ); \n";
     }
           
     outStream <<
@@ -573,15 +573,14 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // WARD ISO 1992
       /**/
-      "    shininess /= 255; \n"
       "    float roughness_sq = shininess * shininess + 0.00001f; \n" //-------- no division by 0
-      //"   float roughness_sq = 0.04f + 0.00001f; \n" //-------- no division by 0
+      //"    float roughness_sq = 0.04f + 0.00001f; \n" //-------- no division by 0
       "    float beta = -pow( tan( acos( n_dot_h ) ), 2.0f ); \n"
       "    float denom = 3.14159f * roughness_sq; \n"
       "    float numer = exp( beta / roughness_sq ); \n"
       "    denom *= 4.0f * sqrt( n_dot_l * n_dot_v ); \n"
       "    float3 specular = specular_term * ( numer / denom ); \n"     
-      "    result += n_dot_l * ( diffuse_term + specular ); \n"; //--------
+      "    result += n_dot_l * ( diffuse + specular ); \n"; //--------
       /**/
     }
 
@@ -625,6 +624,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       "    float roughness = roughness_a * exp( roughness_b / roughness_c ); \n"
       "    float3 specular = specular_term * ( ( geo * roughness ) / ( n_dot_v * n_dot_l ) ); \n"
       "    result += n_dot_l * ( diffuse + specular ); \n";
+      /**/
     }
 
     if(fp_need_phong())
@@ -632,9 +632,9 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // PHONG 1973
       /**/
-      "    float3 r = normalize 2.0f * n * n_dot_l - l ); \n"
-      "    float r_dot_v = dot( r, v ); \n"
-      "    float3 specular = specular_term * pow( r_dot_v, shininess ); \n"
+      "    float3 r = normalize( 2.0f * n * n_dot_l - l ); \n"
+      "    float r_dot_v = max( dot( r, v ), 0.0f ); \n"
+      "    float3 specular = specular_term * pow( r_dot_v, shininess * 255.0f ); \n"
       "    result += n_dot_l * diffuse + specular; \n";
       /**/
     }
@@ -644,7 +644,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // BLINN-PHONG 1977
       /**/
-      "    float3 specular = specular_term * pow( n_dot_h, shininess ); \n"
+      "    float3 specular = specular_term * pow( n_dot_h, shininess * 255.0f ); \n"
       "    result += n_dot_l * diffuse + specular; \n";
       /**/
     }
