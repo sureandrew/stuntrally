@@ -477,9 +477,39 @@ bool MaterialGenerator::fpNeedNormal()
 	return (needEnvMap() || needNormalMap() || fpNeedLighting() || needTerrainLightMap());
 }
 
-bool MaterialGenerator::fp_need_ward() //--------
+bool MaterialGenerator::fp_need_ward_iso() //--------
 {
-  return mShader->ward;
+  return mShader->technique == "ward-iso";
+}
+
+bool MaterialGenerator::fp_need_ward_aniso() //--------
+{
+  return mShader->technique == "ward-aniso";
+}
+
+bool MaterialGenerator::fp_need_cook_torrance() //--------
+{
+  return mShader->technique == "cook-torrance";
+}
+
+bool MaterialGenerator::fp_need_blinn_phong() //--------
+{
+  return mShader->technique == "blinn-phong";
+}
+
+bool MaterialGenerator::fp_need_phong() //--------
+{
+  return mShader->technique == "phong";
+}
+
+bool MaterialGenerator::need_refinement() //--------
+{
+  return mShader->refinement;
+}
+
+bool MaterialGenerator::fp_need_tangent() //--------
+{
+  return mShader->tangent;
 }
 
 bool MaterialGenerator::fpNeedEyeVector()

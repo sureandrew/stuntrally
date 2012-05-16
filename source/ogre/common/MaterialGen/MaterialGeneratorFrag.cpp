@@ -323,7 +323,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	if (fpNeedEyeVector()) outStream <<
 		"	in float4 inEyeVector : TEXCOORD"+toStr(mTexCoord_i++)+", \n";
 		
-	if (needNormalMap()) outStream <<
+	if (needNormalMap() || fp_need_tangent()) outStream <<
 		"	in float4 tangent : TEXCOORD"+toStr(mTexCoord_i++)+", \n"
 		"	uniform float bumpScale, \n";
 
@@ -408,8 +408,8 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		"	uniform float3 matDiffuse, \n";
 		if (!needSpecMap()) outStream <<
 		"	uniform float4 matSpecular, \n"; // shininess in w
-    /*if(fp_need_ward()) //--------
-      outStream << "	uniform float2 aniso_roughness, \n";*/
+    if(fp_need_ward_aniso()) //--------
+      outStream << "	uniform float2 aniso_roughness, \n";
 	}
 	outStream <<
 		"	uniform float3 fogColor, \n";
@@ -449,123 +449,233 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		"	float4 blendTex = tex2D(blendMap, texCoord.xy); \n"
 		"	float4 diffuseTex = float4( lerp(lightTex.xyz, blendTex.xyz, blendTex.a), 1 ); \n";
 	}
-		
-	// get TBN matrix for normal / parallax mapping
-	if (needNormalMap() || mShader->parallax) outStream <<
-		"	float3 binormal = cross(tangent.xyz, iNormal.xyz); \n"
-		//"	float3 binormal = cross(tangent.xyz, iNormal.xyz) * bumpScale; \n" //-------- B
-		//"	float3 n_tangent = tangent.xyz * bumpScale; \n" //-------- N
-		"	float3x3 tbn = float3x3(tangent.xyz*bumpScale, binormal*bumpScale, iNormal.xyz); \n";
-    //"	float3x3 tbn = float3x3(n_tangent, binormal, iNormal.xyz); \n"; //-------- 
+
+    
+  // get TBN matrix for normal / parallax mapping
+  if (needNormalMap() || mShader->parallax) 
+  {
+    outStream << "	float3x3 tbn = float3x3( tangent.xyz * bumpScale, cross( tangent.xyz, iNormal.xyz ) * bumpScale, iNormal.xyz ); \n";
+  }
 		
 	if (mShader->parallax && needDiffuseMap())
 	{
 		outStream <<
 		// convert view vector to tangent space using TBN matrix
-		"	float3 tsViewVec = normalize(mul(tbn, inEyeVector.xyz)); \n"
-		"	float clamp = 2.f; \n"
-		"	float height = diffuseTex.a; \n"
-		"	float offset = parallaxHeight * height; \n"
+		"	float3 tsViewVec = normalize( mul( tbn, inEyeVector.xyz ) ); \n"
+		//"	float clamp = 2.f; \n"
+		"	float height = diffuseTex.w; \n"
+		"	float offset = parallaxHeight * ( height * 2.0f - 1.0f ); \n"
 		// shift UV
+    " float2 tmp_tex_coord = texCoord.xy; \n"
 		"	texCoord.xy += offset * tsViewVec.xy; \n"
 		// re-fetch diffuse texture using the modulated UV
-		"	diffuseTex = tex2D(diffuseMap, texCoord.xy); \n";
+		"	diffuseTex = tex2D( diffuseMap, texCoord.xy ); \n";
+
+    if(need_refinement())
+    {
+      outStream <<
+      " height += diffuseTex.w; \n"
+      " offset = parallaxHeight * ( height - 1.0 ); \n"
+      " texCoord.xy = tmp_tex_coord + offset * tsViewVec.xy; \n"
+      " diffuseTex = tex2D( diffuseMap, texCoord.xy ); \n";
+    }
 	}
 	
-	if (fpNeedEyeVector()) outStream <<
-		"	float3 eyeVector = normalize(inEyeVector.xyz); \n"; // normalize in the pixel shader for higher accuracy (inaccuracies would be caused by vertex interpolation)
-	if (fpNeedNormal())
+	if (fpNeedEyeVector()) 
+  {
+    outStream <<
+		"	float3 v = -normalize( inEyeVector.xyz ); \n"; // normalize in the pixel shader for higher accuracy (inaccuracies would be caused by vertex interpolation)
+  }
+
+  if (fpNeedNormal())
 	{
-		outStream <<
-		"	float3 normal;";
-		
-		if (needNormalMap()) outStream <<
-			"	float4 normalTex = tex2D(normalMap, texCoord.xy); \n"
-			"	normal = mul(transpose(tbn), normalTex.xyz * 2.f - 1.f); \n"
-			"	normal = mul((float3x3)wITMat, normal); \n";
-		else outStream <<
-			"	normal = mul((float3x3)wITMat, iNormal.xyz); \n";
-		
-		outStream << 
-		"	normal = normalize(normal); \n";
-	}
+    outStream << "  float3 n = float3( 0.0f ); \n";
+  
+    if (needNormalMap())
+    { 
+      outStream <<
+	    "	float4 normalTex = tex2D( normalMap, texCoord.xy ); \n"
+			"	n = mul( transpose(tbn), normalTex.xyz * 2.f - 1.f ); \n"
+			"	n = mul( (float3x3)wITMat, n ); \n";
+    }
+		else 
+    {    
+      outStream <<
+			"	n = mul( (float3x3)wITMat, iNormal.xyz ); \n";
+    }
+    
+    outStream << 
+    "  n = normalize( n ); \n";
+  }
+
+  if(fpNeedEyeVector() && fpNeedNormal())
+  {
+    outStream << "  float n_dot_v = dot( n, v ); \n"; //-------- N dot V
+  }
 
 	// calculate lighting (per-pixel)
 	if (fpNeedLighting())
 	{
 		outStream <<	
 		// compute the diffuse term
-		"	float3 lightDir = normalize(lightPosition.xyz); \n"
-		"	float diffuseLight = max(dot(lightDir, normal), 0); \n"; // N dot L
+		"	float3 l = normalize( lightPosition.xyz ); \n"
+		"	float n_dot_l = dot( n, l ); \n"; // N dot L
 		
-		if ((needLightMap() && needBlendMap())) outStream <<
-			"	float3 diffuse = lightDiffuse.xyz *  diffuseLight * diffuseTex.xyz; \n";
-		else if (needDiffuseMap()) outStream <<
-			"	float3 diffuse = matDiffuse.xyz * lightDiffuse.xyz *  diffuseLight * diffuseTex.xyz; \n";
-		else outStream <<
-			"	float3 diffuse = matDiffuse.xyz * lightDiffuse.xyz * diffuseLight; \n";
+		if ((needLightMap() && needBlendMap())) 
+    {
+      outStream <<
+			"	float3 diffuse = lightDiffuse.xyz * diffuseTex.xyz; \n";
+    }
+		else if (needDiffuseMap()) 
+    {
+      outStream <<
+			"	float3 diffuse = matDiffuse.xyz * lightDiffuse.xyz * diffuseTex.xyz; \n";
+    }
+		else 
+    {
+      outStream <<
+			"	float3 diffuse = matDiffuse.xyz * lightDiffuse.xyz; \n";
+    }
 			
 		// compute the specular term
-		if (needSpecMap()) outStream <<
-			"	float4 specTex = tex2D(specMap, texCoord.xy); \n"
+		if (needSpecMap()) 
+    {
+      outStream <<
+			"	float4 specTex = tex2D( specMap, texCoord.xy ); \n"
 			"	float3 matSpec = specTex.xyz; \n"
 			"	float shininess = specTex.w*255; \n";
-		else outStream <<
+    }
+		else 
+    {
+      outStream <<
 			"	float3 matSpec = matSpecular.xyz; \n"
 			"	float shininess = matSpecular.w; \n";
-		outStream <<
-		"	float3 half = normalize(lightDir - eyeVector); \n";
+    }
 
     outStream << 
-    " float3 result = float3(0); \n" //-------- this will contain the lighting result
-    " float n_dot_l = diffuseLight; \n"; //-------- N dot L
-
-    if(fp_need_ward()) //--------
+    "  float3 result = float3( 0 ); \n" //-------- this will contain the lighting result
+    "  if( n_dot_l > 0.0 ) \n"
+    "  { \n";
+    if(fp_need_tangent())
     {
       outStream << 
-      " if(n_dot_l > 0.0) \n"
-      " { \n"
-      "   float n_dot_h = dot(normal, half); \n" //-------- N dot H;
-      "   float n_dot_v = dot(normal.xyz, eyeVector); \n" //-------- N dot V 
-      // TODO: need to include that shininess somewhere...
-      "   shininess /= 255; \n"
-      "   float roughness_sq = shininess * shininess + 0.00001f; \n" //-------- no division by 0
-      "   float exp_a = -pow(tan(acos(n_dot_h)), 2.0f); \n"
-      "   float numer = exp(exp_a / roughness_sq); \n"
-      "   float denom = 1.0f / (4.0f * 3.14159f * roughness_sq * sqrt( n_dot_l * n_dot_v )); \n"      
-      "   result += diffuse + lightSpecular.xyz * matSpec * numer * denom * n_dot_l; \n" //--------
-      //"   result += lightSpecular.xyz * matSpec * numer * denom * n_dot_l; \n" //--------
-      " } \n";
+      "    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( n - iNormal.xyz ).yzx ) ); \n"
+      "    float3 b = cross( t, n ); \n";
     }
-    else
-    {
-      outStream << 
-      " if(n_dot_l > 0.0) \n"
-      " { \n"
-		  "	  float specularLight = pow(dot(normal, half), shininess); \n"
+          
+    outStream <<
+		"    float3 h = normalize( l + v ); \n" 
+    "    float n_dot_h = dot( n, h ); \n" //-------- N dot H 
+    "    float3 specular_term = matSpec * lightSpecular.xyz; \n";
 
-		  "	  if (matSpec.x == 0 && matSpec.y == 0 && matSpec.z == 0) specularLight = 0; \n"
-		  "	  if (diffuseLight <= 0) specularLight = 0; \n"
-		  "	  float3 specular = matSpec.xyz * lightSpecular.xyz * specularLight; \n"
-      "   result += diffuse + specular; \n"
-      //"   result += specular; \n"
-      " } \n";
+    if(fp_need_ward_iso())
+    {
+      outStream <<
+      // WARD ISO 1992
+      /**/
+      "    shininess /= 255; \n"
+      "    float roughness_sq = shininess * shininess + 0.00001f; \n" //-------- no division by 0
+      //"   float roughness_sq = 0.04f + 0.00001f; \n" //-------- no division by 0
+      "    float beta = -pow( tan( acos( n_dot_h ) ), 2.0f ); \n"
+      "    float denom = 3.14159f * roughness_sq; \n"
+      "    float numer = exp( beta / roughness_sq ); \n"
+      "    denom *= 4.0f * sqrt( n_dot_l * n_dot_v ); \n"
+      "    float3 specular = specular_term * ( numer / denom ); \n"     
+      "    result += n_dot_l * ( diffuse_term + specular ); \n"; //--------
+      /**/
     }
+
+    if(fp_need_ward_aniso())
+    {
+      outStream <<
+      // WARD ANISO MORODER 2010
+      /**/
+      "    float h_dot_t = dot( h, t ); \n"
+      "    float h_dot_b = dot( h, b ); \n"
+      "    float2 roughness = aniso_roughness + float2( 1e-5f, 1e-5f ); \n"
+      "    float2 beta_coeff = float2( h_dot_t, h_dot_b ) / roughness; \n"
+      "    float beta = -2.0f * ( dot( beta_coeff, beta_coeff ) / ( 1.0f + n_dot_h ) ); \n"
+      "    float denom = 3.14159f * roughness.x * roughness.y; \n"
+      "    float numer = exp( beta ); \n"
+      "    denom *= pow( n_dot_l + n_dot_v, 4.0f ); \n"
+      "    float coeff_1 = dot( -b, l ) * dot( b, v ); \n"
+      "    float coeff_2 = n_dot_l * n_dot_v; \n"
+      "    numer *= 2.0f * ( 1.0f + coeff_2 + coeff_1 * ( coeff_2 + coeff_1 ) ); \n"
+      "    float3 specular = specular_term * ( numer / denom ); \n"
+      "    result += n_dot_l * ( diffuse + specular ); \n";
+      /**/
+    }
+
+    if(fp_need_cook_torrance())
+    {
+      outStream <<
+      // COOK-TORRANCE 1982
+      /**/
+      "    float h_dot_v = dot( h, v ); \n"
+      "    float geo_numer = 2.0f * n_dot_h; \n"
+      "    float geo_denom = 1.0f / h_dot_v; \n"
+      "    float geo_b = ( geo_numer * n_dot_v ) * geo_denom; \n"
+      "    float geo_c = ( geo_numer * n_dot_l ) * geo_denom; \n"
+      "    float geo = min( 1.0f, min( geo_b, geo_c ) ); \n"
+      //  Beckmann roughness
+      "    float roughness_sq = shininess * shininess + 0.00001f; \n"
+      "    float roughness_a = 1.0f / ( 4.0f * roughness_sq * pow( n_dot_h, 4.0f ) ); \n"
+      "    float roughness_b = n_dot_h * n_dot_h - 1.0f; \n"
+      "    float roughness_c = roughness_sq * n_dot_h * n_dot_h; \n"
+      "    float roughness = roughness_a * exp( roughness_b / roughness_c ); \n"
+      "    float3 specular = specular_term * ( ( geo * roughness ) / ( n_dot_v * n_dot_l ) ); \n"
+      "    result += n_dot_l * ( diffuse + specular ); \n";
+    }
+
+    if(fp_need_phong())
+    {
+      outStream <<
+      // PHONG 1973
+      /**/
+      "    float3 r = normalize 2.0f * n * n_dot_l - l ); \n"
+      "    float r_dot_v = dot( r, v ); \n"
+      "    float3 specular = specular_term * pow( r_dot_v, shininess ); \n"
+      "    result += n_dot_l * diffuse + specular; \n";
+      /**/
+    }
+
+    if(fp_need_blinn_phong())
+    {
+      outStream <<
+      // BLINN-PHONG 1977
+      /**/
+      "    float3 specular = specular_term * pow( n_dot_h, shininess ); \n"
+      "    result += n_dot_l * diffuse + specular; \n";
+      /**/
+    }
+    
+    outStream <<
+    "  } \n";
+
+    //"  } \n"
+    //"  result = t; \n";
 
 		// compute the ambient term
 		outStream << "	float3 ambient = matAmbient.xyz * globalAmbient.xyz ";
-		if (needDiffuseMap() || (needLightMap() && needBlendMap())) outStream <<	"* diffuseTex.xyz";
+		if (needDiffuseMap() || (needLightMap() && needBlendMap())) 
+    {
+      outStream <<	"* diffuseTex.xyz";
+    }
 		outStream << "; \n";
 
 		// add all terms together (also with shadow)
-		if (needShadows() || needTerrainLightMap()) outStream <<
-		//"	float3 lightColour = ambient + diffuse*shadowing + specular*shadowing; \n";
-    "	float3 lightColour = ambient + result * shadowing; \n"; //--------
-    //"	float3 lightColour = result * shadowing; \n"; //--------
-		else outStream <<
-		//"	float3 lightColour = ambient + diffuse + specular; \n";
-    "	float3 lightColour = ambient + result; \n"; //--------
-    //"	float3 lightColour = result; \n"; //--------
+		if (needShadows() || needTerrainLightMap()) 
+    {
+      outStream <<
+      "	float3 lightColour = ambient + result * shadowing; \n"; //--------
+      //"	float3 lightColour = result; \n"; //--------
+    }
+		else  
+    {
+      outStream <<
+      "	float3 lightColour = ambient + result; \n"; //--------
+      //"	float3 lightColour = result; \n"; //--------
+    }
 	}
 	
 	// cube reflection
@@ -574,7 +684,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 		if (needFresnel())
 		{
 			outStream <<
-			"	float facing = 1.0 - max(abs(dot(-eyeVector, normal)), 0); \n";
+			"	float facing = 1.0 - max(abs( n_dot_v ), 0); \n";
 			if (!needReflectivityMap()) outStream <<
 				"	float reflectionFactor = saturate(fresnelBias + fresnelScale * pow(facing, fresnelPower)); \n";
 			else outStream <<
@@ -588,7 +698,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 				"	float reflectionFactor = tex2D(reflectivityMap, texCoord.xy).r * reflAmount; \n";
 		}
 		outStream << 
-		"	float3 r = reflect( eyeVector, normal ); \n" // calculate reflection vector
+		"	float3 r = reflect( -v, n ); \n" // calculate reflection vector
 		"	float4 envColor = texCUBE(envMap, r); \n"; // fetch cube map
 
 		if (fpNeedLighting()) outStream <<
@@ -622,7 +732,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	
 	// normal
 	// if (fpNeedNormal()) outStream <<
-	//"	oColor = float4(normal.x, normal.y, normal.z, 1); \n";
+	//"	oColor = float4(n.x, n.y, n.z, 1); \n";
 	
 	// spec
 	//outStream <<
@@ -776,8 +886,8 @@ void MaterialGenerator::individualFragmentProgramParams(Ogre::GpuProgramParamete
 	if (mShader->parallax)
 		params->setNamedConstant("parallaxHeight", mDef->mProps->parallaxHeight);
 
-	/*if (mShader->ward)
-		params->setNamedConstant("aniso_roughness", Vector4(mDef->mProps->aniso_roughness[0], mDef->mProps->aniso_roughness[1], 0, 0));*/
+	if (fp_need_ward_aniso())
+		params->setNamedConstant("aniso_roughness", Vector4(mDef->mProps->aniso_roughness[0], mDef->mProps->aniso_roughness[1], 0, 0));
 
 	if (needShadows())
 	{

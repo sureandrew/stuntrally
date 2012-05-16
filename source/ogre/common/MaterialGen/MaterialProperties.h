@@ -71,8 +71,10 @@ struct MaterialProperties
 	bool fog; // enable fog
 	bool lighting; // enable lighting
 
-  bool ward; //-------- enable ward lighting
-  //Ogre::Vector2 aniso_roughness; //-------- determines the shape of the specular highlight. Needs to be in range ([0...1], [0...1])
+  std::string technique; //-------- which lighting technique?
+  Ogre::Vector2 aniso_roughness; //-------- determines the shape of the specular highlight. Needs to be in range ([0...1], [0...1])
+  bool refinement; //-------- parallax refinement
+  bool tangent; //--------
 	
 	// contribute to ssao yes/no
 	bool ssao;

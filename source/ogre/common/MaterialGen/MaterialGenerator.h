@@ -115,7 +115,14 @@ protected:
 	virtual bool fpNeedPos();
 	virtual bool fpNeedNormal();
 	virtual bool fpNeedEyeVector();
-  virtual bool fp_need_ward(); //--------
+
+  virtual bool fp_need_ward_iso(); //--------
+  virtual bool fp_need_ward_aniso(); //--------
+  virtual bool fp_need_cook_torrance(); //--------
+  virtual bool fp_need_phong(); //--------
+  virtual bool fp_need_blinn_phong(); //--------
+  virtual bool need_refinement(); //--------
+  virtual bool fp_need_tangent(); //--------
 	 
 	//MRT
 	virtual bool vpNeedWvMat();
