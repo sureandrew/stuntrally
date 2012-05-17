@@ -556,13 +556,13 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 
     outStream << 
     "  float3 result = float3( 0 ); \n" //-------- this will contain the lighting result
-"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
+//"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
     "  if( n_dot_l > 0.0 ) \n"
     "  { \n";
     if(fp_need_tangent())
     {
       outStream << 
-      //"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
+      "    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
       "    float3 b = normalize( cross( t, n ) ); \n";
     }
           
