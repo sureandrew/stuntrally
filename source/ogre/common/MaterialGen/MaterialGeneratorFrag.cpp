@@ -639,7 +639,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       "    float roughness_c = roughness_sq * n_dot_h * n_dot_h; \n"
       "    float roughness = roughness_a * exp( roughness_b / roughness_c ); \n"
       "    specular = specular_term * ( ( geo * roughness ) / n_dot_v ); \n"
-      "    result += n_dot_l * diffuse + specular; \n";
+      "    result += n_dot_l * ( diffuse + specular ); \n";
       /**/
     }
 
