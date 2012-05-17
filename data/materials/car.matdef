@@ -18,7 +18,6 @@
 	normalMapPriority = 0.9
 	technique = ward-aniso
   aniso_roughness = 0.2 0.2
-  tangent = true
   refinement = true
 	
 [car_glass]

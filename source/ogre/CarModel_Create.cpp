@@ -181,6 +181,12 @@ void CarModel::Create(int car)
 	{
 		Entity* eCar = mSceneMgr->createEntity("Car"+ strI, sDirname + "_" + "body.mesh", "Car" + strI);
 
+   	unsigned short src, dest;
+    if(!eCar->getMesh()->suggestTangentVectorBuildParams(VES_TANGENT, src, dest))
+    {
+  		eCar->getMesh()->buildTangentVectors(VES_TANGENT, src, dest);
+    }
+
 		//eCar->setCastShadows(false);
 		bodyBox = eCar->getBoundingBox();
 		if (ghost)  {  eCar->setRenderQueueGroup(g);  eCar->setCastShadows(false);  }

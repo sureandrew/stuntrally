@@ -91,7 +91,7 @@ void MaterialGenerator::generateVertexProgramSource(Ogre::StringUtil::StrStreamT
 	if (vpNeedNormal()) outStream <<
 		"	float3 normal			 			: NORMAL, \n";
 	
-	if (vpNeedTangent()) outStream <<
+	if (vpNeedTangent() || fp_need_tangent()) outStream <<
 		"	float3 tangent						: TANGENT, \n";
 	outStream << 
 	"	float2 texCoord 					: TEXCOORD0, \n";
@@ -145,7 +145,7 @@ void MaterialGenerator::generateVertexProgramSource(Ogre::StringUtil::StrStreamT
 	if (fpNeedEyeVector()) outStream <<
 		"	out float4 oEyeVector : TEXCOORD"+toStr(mTexCoord_i++)+", \n";
 	
-	if (needNormalMap()) outStream <<
+	if (needNormalMap() || fp_need_tangent()) outStream <<
 		"	out float4 oTangent : TEXCOORD"+toStr(mTexCoord_i++)+", \n";
 	
 	if(MRTSupported())
@@ -231,7 +231,7 @@ void MaterialGenerator::generateVertexProgramSource(Ogre::StringUtil::StrStreamT
 	if (fpNeedEyeVector()) outStream <<
 		"	oEyeVector.xyz = worldPosition.xyz - eyePosition.xyz; \n";
 
-	if (needNormalMap()) outStream <<
+	if (needNormalMap() || fp_need_tangent()) outStream <<
 		"	oTangent.xyz = tangent.xyz; \n";
 		
 	if (needShadows())

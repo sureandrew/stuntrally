@@ -167,6 +167,7 @@
 	
 [rock1]
 	parallax = true
+  refinement = true
 	diffuseMap_1024 = rock1.png
 	normalMap_1024 = rock1_normal.png
 	receivesDepthShadows = true

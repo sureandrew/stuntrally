@@ -18,7 +18,6 @@ struct ShaderProperties
 	bool lighting;
   std::string technique; //-------- lighting technique
   bool refinement; //-------- parallax refinement
-  bool tangent; //--------
 	bool shadows;
 	bool transparent; bool lightingAlpha; // transparency
 	unsigned int wind;

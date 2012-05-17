@@ -30,7 +30,6 @@ ShaderProperties::ShaderProperties( MaterialProperties* props, MaterialFactory* 
 	lighting = props->lighting;
   technique = props->technique; //-------- assign value of material property
   refinement = props->refinement;
-  tangent = props->tangent;
 	shadows = ( (props->receivesShadows && parent->getShadows()) 
 			||  (props->receivesDepthShadows && parent->getShadowsDepth())
 			  ) && (1-props->shadowPriority <= parent->getShaderQuality());
@@ -59,7 +58,6 @@ bool ShaderProperties::isEqual( ShaderProperties* other )
 	if (other->lighting != lighting) return false;
 	if (other->technique != technique) return false;
 	if (other->refinement != refinement) return false;
-	if (other->tangent != tangent) return false;
 	if (other->lightingAlpha != lightingAlpha) return false;
 	if (other->customGenerator != customGenerator) return false;
 	if (other->wind != wind) return false;

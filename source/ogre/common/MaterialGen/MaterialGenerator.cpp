@@ -509,7 +509,7 @@ bool MaterialGenerator::need_refinement() //--------
 
 bool MaterialGenerator::fp_need_tangent() //--------
 {
-  return mShader->tangent;
+  return fp_need_ward_aniso();
 }
 
 bool MaterialGenerator::fpNeedEyeVector()

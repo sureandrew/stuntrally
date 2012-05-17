@@ -18,7 +18,7 @@ MaterialProperties::MaterialProperties() :
 	depthBias(0), depthCheck(true), transparentSorting(true), lightingAlpha(0.0, 0.0, 0.0, 0.0),
 	sceneBlend(SBM_DEFAULT), depthWrite(true), alphaRejectFunc(CMPF_ALWAYS_PASS), alphaRejectValue(0.0),
 	fog(true), lighting(true), textureAddressMode(TextureUnitState::TAM_WRAP), technique("blinn-phong"), //-------- blinn-phong by default
-	terrainLightMap(false), ssao(true), ssaoReject(false), customGenerator(""), wind(0), vertexColour(false), tangent(false), //--------
+	terrainLightMap(false), ssao(true), ssaoReject(false), customGenerator(""), wind(0), vertexColour(false),
 	waveBump_Speed_HighFreq_Spec(0.5, 1.0, 0.0, 1.0), reflVal_Refl2_Distort_Opacity(1, 1, 0.1, 1), refinement(false), //--------
 	envMapPriority(0.5), shadowPriority(0.5), normalMapPriority(0.5), aniso_roughness(1.0, 1.0), //-------- 
 	deepColour(0.0, 0.3, 0.5, 1.0), shallowColour(0.0, 0.9, 1.0, 0.3), reflectionColour(0.9, 1.0, 1.0, 1.0),
@@ -97,7 +97,6 @@ void MaterialProperties::setProperty(const std::string& prop, const std::string&
 	else if (prop == "lighting") lighting = str2bool(value);
   else if (prop == "technique") technique = value; //-------- this grabs the value from the material file
   else if (prop == "refinement") refinement = str2bool(value);
-  else if (prop == "tangent") tangent = str2bool(value);
   else if (prop == "aniso_roughness") aniso_roughness = str2vec2(value);
 	else if (prop == "fog") fog = str2bool(value);
 	else if (prop == "alphaRejectValue") alphaRejectValue = str2float(value);
