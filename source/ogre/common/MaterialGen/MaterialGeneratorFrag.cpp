@@ -496,11 +496,13 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
 	    "	float4 normalTex = tex2D( normalMap, texCoord.xy ); \n"
 			"	n = mul( transpose(tbn), normalTex.xyz * 2.f - 1.f ); \n"
+      " float3 tmp_normal = n; \n"
 			"	n = mul( (float3x3)wITMat, n ); \n";
     }
 		else 
     {    
       outStream <<
+      " float3 tmp_normal = iNormal.xyz; \n"
 			"	n = mul( (float3x3)wITMat, iNormal.xyz ); \n";
     }
     
@@ -554,13 +556,13 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 
     outStream << 
     "  float3 result = float3( 0 ); \n" //-------- this will contain the lighting result
-//"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( n - iNormal.xyz ).yzx ) ); \n"
+"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
     "  if( n_dot_l > 0.0 ) \n"
     "  { \n";
     if(fp_need_tangent())
     {
       outStream << 
-      "    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( n - iNormal.xyz ).yzx ) ); \n"
+      //"    float3 t = normalize( mul( (float3x3)wITMat, tangent.xyz + ( tmp_normal - iNormal.xyz ).yzx ) ); \n"
       "    float3 b = normalize( cross( t, n ) ); \n";
     }
           
@@ -667,8 +669,9 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
     outStream <<
     "  } \n";
 
+    //outStream <<
     //"  } \n"
-    //"  result = t; \n";
+    //"  result = mul( (float3x3)wITMat, tangent.xyz ); \n";
 
 		// compute the ambient term
 		outStream << "	float3 ambient = matAmbient.xyz * globalAmbient.xyz ";
@@ -737,7 +740,6 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	// add fog
 	outStream <<
 		"	oColor = lerp(color1, float4(fogColor,1), fogAmount); \n";
-    //" oColor = float4(lightColour, 1); \n";
 	
 	// debug colour output  ------------------------------------------
 	
@@ -746,8 +748,8 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	//"	oColor = float4(worldPosition.x, 1, worldPosition.z, 1); \n";
 	
 	// normal
-	// if (fpNeedNormal()) outStream <<
-	//"	oColor = float4(n.x, n.y, n.z, 1); \n";
+	// if (fpNeedNormal() || fp_need_tanget()) outStream <<
+	//"	oColor = float4(t.x, t.y, t.z, 1); \n";
 	
 	// spec
 	//outStream <<
