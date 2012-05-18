@@ -569,9 +569,11 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
     outStream <<
 		"    float3 h = normalize( l + v ); \n" 
     "    float n_dot_h = dot( n, h ); \n" //-------- N dot H 
-    "    float3 r = normalize( 2.0f * n * n_dot_l - l ); \n"
-    "    float n_dot_r = dot( n, r ); \n" //-------- N dot R 
-    "    float3 specular_term = matSpec * lightSpecular.xyz; \n"
+    "    float n_dot_v = dot( n, v ); \n" //-------- N dot R 
+    "    float h_dot_v = dot( h, v ); \n"
+    "    float fresnel = pow( 1.0 - h_dot_v, 5.0 ); \n"
+    "    float3 specular_term = mix( matSpec * lightSpecular.xyz, float3( 1.0f, 1.0f, 1.0f ), fresnel ); \n"
+    //"    shininess = 0.04f + 0.00001f; \n"
 
     "    float3 specular = float3( 0.0f, 0.0f, 0.0f ); \n";
 
@@ -580,14 +582,13 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // WARD ISO 1992
       /**/
-      "    if( n_dot_r > 0.0f ) \n"
+      "    if( n_dot_v > 0.0f ) \n"
       "    { \n" 
       "      float roughness_sq = shininess * shininess + 0.00001f; \n" //-------- no division by 0
-      //"      float roughness_sq = 0.04f + 0.00001f; \n" //-------- no division by 0
       "      float beta = -pow( tan( acos( n_dot_h ) ), 2.0f ); \n"
       "      float denom = 3.14159f * roughness_sq; \n"
       "      float numer = exp( beta / roughness_sq ); \n"
-      "      denom *= 4.0f * sqrt( n_dot_l * n_dot_r ); \n" //-------- I wonder if I need the sqrt here?
+      "      denom *= 4.0f * sqrt( n_dot_l * n_dot_v ); \n" //-------- I wonder if I need the sqrt here?
       "      specular = specular_term * ( numer / denom ); \n"     
       "    } \n"
 
@@ -600,7 +601,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // WARD ANISO 1992
       /**/
-      "    if( n_dot_r > 0.0f ) \n"
+      "    if( n_dot_v > 0.0f ) \n"
       "    { \n" 
       "      float h_dot_t = dot( h, t ); \n"
       "      float h_dot_b = dot( h, b ); \n"
@@ -609,13 +610,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       "      float beta = -2.0f * ( dot( beta_coeff, beta_coeff ) / ( 1.0f + n_dot_h ) ); \n"
       "      float denom = 3.14159f * roughness.x * roughness.y; \n"
       "      float numer = exp( beta ); \n"
-      /**
-      "      denom *= pow( n_dot_l + n_dot_r, 4.0f ); \n"
-      "      float coeff_1 = dot( b, l ) * dot( b, v ); \n"
-      "      float coeff_2 = n_dot_l * n_dot_r; \n"
-      "      numer *= 2.0f * ( 1.0f + coeff_2 + coeff_1 * ( coeff_2 + coeff_1 ) ); \n"
-      /**/
-      "      denom *= 4.0f * sqrt( n_dot_l * n_dot_r ); \n"
+      "      denom *= 4.0f * sqrt( n_dot_l * n_dot_v ); \n"
       "      specular = specular_term * ( numer / denom ); \n"
       "    } \n"
       "    result += n_dot_l * ( diffuse + specular ); \n";
@@ -627,7 +622,6 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // COOK-TORRANCE 1982
       /**/
-      "    float h_dot_v = dot( h, v ); \n"
       "    float geo_numer = 2.0f * n_dot_h; \n"
       "    float geo_denom = 1.0f / h_dot_v; \n"
       "    float geo_b = ( geo_numer * n_dot_v ) * geo_denom; \n"
@@ -635,13 +629,12 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       "    float geo = min( 1.0f, min( geo_b, geo_c ) ); \n"
       //  Beckmann roughness
       "    float roughness_sq = shininess * shininess + 0.00001f; \n"
-      //"    float roughness_sq = 0.04f + 0.00001f; \n" //-------- no division by 0
       "    float roughness_a = 1.0f / ( 4.0f * roughness_sq * pow( n_dot_h, 4.0f ) ); \n"
       "    float roughness_b = n_dot_h * n_dot_h - 1.0f; \n"
       "    float roughness_c = roughness_sq * n_dot_h * n_dot_h; \n"
       "    float roughness = roughness_a * exp( roughness_b / roughness_c ); \n"
       "    specular = specular_term * ( ( geo * roughness ) / n_dot_v ); \n"
-      "    result += n_dot_l * ( diffuse + specular ); \n";
+      "    result += n_dot_l * diffuse + specular; \n";
       /**/
     }
 
@@ -650,6 +643,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       outStream <<
       // PHONG 1973
       /**/
+      "    float3 r = normalize( 2.0f * n * n_dot_l - l ); \n"
       "    float r_dot_v = dot( r, v ); \n"
       "    specular = specular_term * pow( max( r_dot_v, 0.0f ), shininess * 255.0f ); \n"
       "    result += n_dot_l * diffuse + specular; \n";
@@ -665,13 +659,12 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
       "    result += n_dot_l * diffuse + specular; \n";
       /**/
     }
+  
+    //outStream <<
+    //"  result = float3( fresnel, fresnel, fresnel ); \n";
     
     outStream <<
     "  } \n";
-
-    //outStream <<
-    //"  } \n"
-    //"  result = mul( (float3x3)wITMat, tangent.xyz ); \n";
 
 		// compute the ambient term
 		outStream << "	float3 ambient = matAmbient.xyz * globalAmbient.xyz ";
@@ -740,6 +733,7 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	// add fog
 	outStream <<
 		"	oColor = lerp(color1, float4(fogColor,1), fogAmount); \n";
+    //"	oColor = float4( lightColour, 1.0 ); \n";
 	
 	// debug colour output  ------------------------------------------
 	
@@ -748,8 +742,8 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 	//"	oColor = float4(worldPosition.x, 1, worldPosition.z, 1); \n";
 	
 	// normal
-	// if (fpNeedNormal() || fp_need_tanget()) outStream <<
-	//"	oColor = float4(t.x, t.y, t.z, 1); \n";
+	//if (fpNeedNormal() || fp_need_tangent()) outStream <<
+	//"	oColor = float4(n, 1); \n";
 	
 	// spec
 	//outStream <<
