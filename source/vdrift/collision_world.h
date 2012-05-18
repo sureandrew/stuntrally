@@ -21,9 +21,7 @@ public:
 		btConstraintSolver* constraintSolver,
 		btCollisionConfiguration* collisionConfig)
 	:	btDiscreteDynamicsWorld(dispatcher, broadphase, constraintSolver, collisionConfig)
-		//track(0),
-	{
-	}
+	{  }
 
 	~DynamicsWorld() {  }
 
@@ -61,10 +59,11 @@ public:
 	bool CastRay(
 		const MATHVECTOR <float,3> & position, const MATHVECTOR <float,3> & direction, const float length,
 		const btCollisionObject * caster, COLLISION_CONTACT & contact,
-		int* pOnRoad, bool ignoreCars) const;
+		int* pOnRoad, bool ignoreCars, bool ignoreFluids) const;
 	
 	// update world physics
-	void Update(float dt, bool profiling);
+	void Update(double dt, bool profiling);
+	class CARDYNAMICS* cdOld;  // for hit force setting back to 0
 	std::string bltProfiling;  // blt debug times info
 	
 	void Draw();
@@ -75,7 +74,7 @@ public:
 	
 //private:
 public:
-	float fixedTimestep;  int maxSubsteps;
+	double fixedTimestep;  int maxSubsteps;
 	
 	// . . . bullet sim . . .
 	btDefaultCollisionConfiguration* config;

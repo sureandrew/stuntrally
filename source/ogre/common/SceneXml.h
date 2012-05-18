@@ -5,6 +5,11 @@
 #include <OgreVector3.h>
 #include <OgreVector2.h>
 #include <OgreColourValue.h>
+#include <OgreQuaternion.h>
+#include "../../vdrift/mathvector.h"
+#include "../../vdrift/quaternion.h"
+
+namespace Ogre {  class SceneNode;  class Entity;  }
 
 
 struct TerLayer		// terrain texture layer
@@ -45,7 +50,6 @@ public:
 	//  methods
 	TerData();	void Default();
 	float getHeight(const float& fi, const float& fj);
-	static int GENERATE_HMAP;
 };
 
 
@@ -74,6 +78,25 @@ public:
 	int idParticles;  // auto set  index for wheel particles  -1 none
 
 	FluidBox();
+};
+
+
+class Object		// object - mesh (static) or prop (dynamic)
+{
+public:
+	MATHVECTOR <float, 3> pos;
+	QUATERNION <float> rot;
+	Ogre::Vector3 scale;
+	std::string name;  // mesh file name
+
+	Ogre::SceneNode* nd;  // ogre
+	Ogre::Entity* ent;  
+	class btDefaultMotionState* ms;  // bullet
+	class btCollisionObject* cobj;
+
+	Object();
+	void SetFromBlt();
+	static Ogre::Quaternion qrFix,qrFix2;
 };
 
 
@@ -123,8 +146,12 @@ public:
 	//  to force regenerating impostors on different sceneries
 	int sceneryId;
 	
+	//  fuids
 	std::vector<FluidBox> fluids;
 	class FluidsXml* pFluidsXml;  // set this after Load
+	
+	//  objects
+	std::vector<Object> objects;
 		
 	//  methods
 	Scene();  void Default(), UpdateFluidsId();

@@ -53,7 +53,10 @@ void SplitScreenManager::UpdateCamDist()
 void SplitScreenManager::CleanUp()
 {
 	for (std::list<Ogre::Viewport*>::iterator vpIt=mViewports.begin(); vpIt != mViewports.end(); ++vpIt)
+	{
+		CompositorManager::getSingleton().removeCompositorChain(*vpIt);
 		mWindow->removeViewport( (*vpIt)->getZOrder() );
+	}
 	mViewports.clear();
 	
 	for (std::list<Ogre::Camera*>::iterator it=mCameras.begin(); it != mCameras.end(); ++it)
@@ -139,7 +142,16 @@ void SplitScreenManager::Align()
 		// Create viewport, use i as Z order
 		mViewports.push_back(mWindow->addViewport( mCameras.back(), i+5, dims[0], dims[1], dims[2], dims[3]));
 	}
-	
+	//  always create for 4 cars (replay offset camera view)
+	for (int i=mNumViewports; i < 4; i++)
+	{
+		mCameras.push_back(mSceneMgr->createCamera("PlayerCamera" + toStr(i)));
+		mCameras.back()->setPosition(Vector3(0,-100,0));
+		mCameras.back()->lookAt(Vector3(0,-100,10));
+		mCameras.back()->setFarClipDistance(pSet->view_distance*1.1f);
+		mCameras.back()->setNearClipDistance(0.2f);
+	}
+		
 	// Create gui viewport if not already existing
 	if (!mGuiViewport)
 	{
@@ -258,7 +270,7 @@ void SplitScreenManager::preViewportUpdate(const Ogre::RenderTargetViewportEvent
 	else
 	{
 		//  Gui viewport - hide stuff we don't want
-		pApp->UpdateHUD(-1, 1.f / mWindow->getLastFPS());  //-1, NULL, NULL, 1.f / mWindow->getLastFPS() );
+		pApp->UpdateHUD(-1, 1.f / mWindow->getLastFPS());
 		pApp->ShowHUDvp(false);
 		
 		// no mouse in key capture mode

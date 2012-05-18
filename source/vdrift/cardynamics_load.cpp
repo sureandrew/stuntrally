@@ -7,6 +7,7 @@
 #include "settings.h"
 #include "../ogre/common/Defines.h"
 #include "Buoyancy.h"
+#include "../ogre/common/QTimer.h"
 
 typedef CARDYNAMICS::T T;
 
@@ -21,9 +22,11 @@ CARDYNAMICS::CARDYNAMICS() :
 	abs(false), tcs(false),
 	maxangle(45.0),
 	bTerrain(false), pSet(0), pScene(0),
-	doBoost(0), doFlip(0), boostVal(0),
-	fHitTime(0), fParIntens(0), //, bHitSnd(0)
-	steerValue(0.f)
+	doBoost(0), doFlip(0), boostFuel(0), boostVal(0),
+	fHitTime(0), fHitForce(0), fParIntens(0), fParVel(0), //hit
+	vHitPos(0,0,0), vHitNorm(0,0,0),
+	steerValue(0.f), velPrev(0,0,0),
+	fCarScrap(0.f), fCarScreech(0.f)
 {
 	for (int i=0; i<4; ++i)
 	{	bWhOnRoad[i]=0;  terSurf[i]=0;
@@ -61,6 +64,8 @@ CARDYNAMICS::~CARDYNAMICS()
 //----------------------------------------------------------------------------------------------------------------------------------
 bool CARDYNAMICS::Load(CONFIGFILE & c, std::ostream & error_output)
 {
+	QTimer ti;  ti.update(); /// time
+
 	bTerrain = false;
 	std::string drive = "RWD";
 	int version(1);
@@ -509,10 +514,18 @@ bool CARDYNAMICS::Load(CONFIGFILE & c, std::ostream & error_output)
 			tire[rightside].SetTread(tread);
 		}
 
+		
+		QTimer tir;  tir.update(); /// time
 		for (int i = 0; i < 4; i++)
 		{
 			tire[WHEEL_POSITION(i)].CalculateSigmaHatAlphaHat();
+			//todo: copy, left and right tires are same
+			//and make option to have 4 tires the same
+			//tires array[] for all cars, asphalt/gravel, not in each .car file
 		}
+		tir.update(); /// time
+		float dt = tir.dt * 1000.f;
+		LogO(Ogre::String(":::: Time tires: ") + toStr(dt) + " ms");
 	}
 
 	//load the mass-only particles
@@ -618,6 +631,9 @@ bool CARDYNAMICS::Load(CONFIGFILE & c, std::ostream & error_output)
 
 	UpdateMass();
 
+	ti.update(); /// time
+	float dt = ti.dt * 1000.f;
+	LogO(Ogre::String(":::: Time car dynamics load: ") + toStr(dt) + " ms");
 	return true;
 }
 
@@ -717,10 +733,11 @@ void CARDYNAMICS::Init(
 		for (i=0; i < numSph; ++i)
 			pos[i] += origin;
 		btMultiSphereShape* chassisShape = new btMultiSphereShape(pos, rad, numSph);
+		//chassisShape->setMargin(0.2f);
 	#endif
 
 
-	T chassisMass = body.GetMass();
+	T chassisMass = body.GetMass();// * 0.4;  // Magic multiplier makes collisions better - problem: mud is very different
 	MATRIX3 <T> inertia = body.GetInertia();
 	btVector3 chassisInertia(inertia[0], inertia[4], inertia[8]);
 
@@ -731,7 +748,7 @@ void CARDYNAMICS::Init(
 	chassisState->setWorldTransform(transform);
 
 	btRigidBody::btRigidBodyConstructionInfo info(chassisMass, chassisState, chassisShape, chassisInertia);
-	info.m_angularDamping = 0.4;  // 0.2-  0.5
+	info.m_angularDamping = 0.4;  // 0.0!+  0.2-  0.5
 	info.m_restitution = 0.0;  //...
 	info.m_friction = 0.7;  /// 0.4~ 0.75
 	///  chasis^

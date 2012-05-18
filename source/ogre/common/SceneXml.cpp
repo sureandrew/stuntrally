@@ -3,6 +3,7 @@
 #include "SceneXml.h"
 #include "FluidsXml.h"
 #include "tinyxml.h"
+#include <OgreSceneNode.h>
 
 using namespace Ogre;
 
@@ -43,6 +44,7 @@ void Scene::Default()
 	camPos = Vector3(10.f,20.f,10.f);  camDir = Vector3(0.f,-0.3f,1.f);
 	sceneryId = 0;
 	fluids.clear();  //
+	objects.clear();  //
 }
 
 PagedLayer::PagedLayer()
@@ -60,6 +62,28 @@ FluidBox::FluidBox()
 	,size(Vector3::ZERO), tile(0.01,0.01)
 {	}
 
+Object::Object()
+	:nd(0),ent(0),ms(0),cobj(0)
+	,pos(0,0,0),rot(0,-1,0,0)
+	,scale(Vector3::UNIT_SCALE)
+{	}
+
+
+///  bullet to ogre  ----------
+Quaternion Object::qrFix(0.707107, 0, 0.707107, 0);  //SetAxisAngle(PI_d/2.f, 0,1,0);
+Quaternion Object::qrFix2(-0.707107, 0, 0.707107, 0);  //SetAxisAngle(-PI_d/2.f, 0,1,0);
+
+void Object::SetFromBlt()
+{
+	if (!nd)  return;
+	Vector3 posO = Vector3(pos[0],pos[2],-pos[1]);
+
+	Quaternion q(rot[0],-rot[3],rot[1],rot[2]);
+	Quaternion rotO = q * qrFix;
+
+	nd->setPosition(posO);
+	nd->setOrientation(rotO);
+}
 
 
 void Scene::UpdateFluidsId()
@@ -95,7 +119,7 @@ bool Scene::LoadXml(String file)
 	//pgLayers.clear();
 
 	// read
-	TiXmlElement* eSky,*eFog,*eLi,*eTer,*ePgd,*eCam,*eFls;
+	TiXmlElement* eSky,*eFog,*eLi,*eTer,*ePgd,*eCam,*eFls,*eObjs;
 	const char* a;
 
 
@@ -281,6 +305,25 @@ bool Scene::LoadXml(String file)
 		a = eCam->Attribute("pos");		if (a)  camPos = s2v(a);
 		a = eCam->Attribute("dir");		if (a)  camDir = s2v(a);
 	}
+
+	///  objects
+	eObjs = root->FirstChildElement("objects");
+	if (eObjs)
+	{
+		TiXmlElement* eObj = eObjs->FirstChildElement("o");
+		while (eObj)
+		{
+			Object o;
+			a = eObj->Attribute("name");	if (a)  o.name = std::string(a);
+
+			a = eObj->Attribute("pos");		if (a)  {  Vector3 v = s2v(a);  o.pos = MATHVECTOR<float,3>(v.x,v.y,v.z);  }
+			a = eObj->Attribute("rot");		if (a)  {  Vector4 v = Ogre::StringConverter::parseVector4(a);  o.rot = QUATERNION<float>(v.x,v.y,v.z,v.w);  }
+			a = eObj->Attribute("sc");		if (a)  o.scale = s2v(a);
+
+			objects.push_back(o);
+			eObj = eObj->NextSiblingElement("o");
+		}
+	}
 	
 	UpdateFluidsId();
 	
@@ -330,10 +373,9 @@ bool Scene::SaveXml(String file)
 	
 
 	TiXmlElement fls("fluids");
-		const FluidBox* fb;
 		for (int i=0; i < fluids.size(); ++i)
 		{
-			fb = &fluids[i];
+			const FluidBox* fb = &fluids[i];
 			TiXmlElement fe("fluid");
 			fe.SetAttribute("name",		fb->name.c_str() );
 			fe.SetAttribute("pos",		toStrC( fb->pos ));
@@ -343,6 +385,7 @@ bool Scene::SaveXml(String file)
 			fls.InsertEndChild(fe);
 		}
 	root.InsertEndChild(fls);
+
 
 	TiXmlElement ter("terrain");
 		ter.SetAttribute("size",		toStrC( td.iVertsX ));
@@ -444,6 +487,26 @@ bool Scene::SaveXml(String file)
 	root.InsertEndChild(cam);
 
 
+	TiXmlElement objs("objects");
+		for (int i=0; i < objects.size(); ++i)
+		{
+			const Object* o = &objects[i];
+			TiXmlElement oe("o");
+			oe.SetAttribute("name",		o->name.c_str() );
+
+			std::string s = toStr(o->pos[0])+" "+toStr(o->pos[1])+" "+toStr(o->pos[2]);
+			oe.SetAttribute("pos",		s.c_str());
+
+			s = toStr(o->rot[0])+" "+toStr(o->rot[1])+" "+toStr(o->rot[2])+" "+toStr(o->rot[3]);
+			oe.SetAttribute("rot",		s.c_str());
+
+			if (o->scale != Vector3::UNIT_SCALE)  // dont save default
+				oe.SetAttribute("sc",	toStrC( o->scale ));
+			objs.InsertEndChild(oe);
+		}
+	root.InsertEndChild(objs);
+
+
 	xml.InsertEndChild(root);
 	return xml.SaveFile(file.c_str());
 }
@@ -512,33 +575,4 @@ void Scene::UpdPgLayers()
 		if (pgLayersAll[i].on)
 			pgLayers.push_back(i);
 	}
-}
-
-
-//
-/// terrain  Height function  (for generate)  very old--
-//
-int TerData::GENERATE_HMAP = 0;
-float TerData::getHeight(const float& fi, const float& fj)
-{
-	const static float wl = 0.014;  // wave len
-	const static float Hmax = 2.5;  // height scale  16 mnt
-	const static float Hofs = 0;  // height offset
-
-	return	Hofs + Hmax * (
-#if 1  // new~
-		-2.6f  //1.5
-		 * cosf(fi*wl*0.73f)*sinf(fj*wl*0.65f)
-		 * cosf(fi*wl*0.53f)*sinf(fj*wl*0.51f)
-		+0.05f
-		 * sinf(fi*wl*3.30f)*cosf(fj*wl*3.82f)
-		 * sinf(fi*wl*11.3f)*cosf(fj*wl*11.5f)
-		 * cosf(fi*wl*0.23f)*sinf(fj*wl*0.22f)/**/
-		+0.4f  //1
-		 * sinf(fi*wl)      *cosf(fj*wl)
-		 * sinf(fi*wl*4.30f)*cosf(fj*wl*4.12f)
-		 * sinf(fi*wl*3.63f)*cosf(fj*wl*5.21f)
-		 * sinf(fi*wl*2.30f)*cosf(fj*wl*2.12f)
-		 * sinf(fi*wl*1.33f)*cosf(fj*wl*1.43f) );
-#endif
 }

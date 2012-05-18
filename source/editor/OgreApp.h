@@ -35,7 +35,7 @@ const Ogre::Real crAngSnaps[ciAngSnapsNum] = {0,15,30,45,90,180};
 
 
 namespace Forests {  class PagedGeometry;  }
-namespace MyGUI  {  class MultiList2;  }
+namespace MyGUI  {  class MultiList2;  class Slider;  }
 class MaterialFactory;
 
 
@@ -74,14 +74,13 @@ protected:
 	virtual void processMouse();
 	bool KeyPress(const CmdKey &arg);  void trkListNext(int rel);
 	Ogre::Vector3 vNew;	void editMouse();
-	void GuiShortcut(int tab, int subtab=-1);
 	
 	//  create  . . . . . . . . . . . . . . . . . . . . . . . . 
 	bool bNewHmap, bTrGrUpd;  Ogre::Real terMaxAng;
-	Ogre::String resTrk;  void NewCommon(), UpdTrees();
-	void CreateTerrain(bool bNewHmap=false, bool bTer=true), CreateBltTerrain();
-	void GetTerAngles(int xb,int yb,int xe,int ye);
-	void CreateTrees(), CreateFluids(), DestroyFluids(), CreateBltFluids();
+	Ogre::String resTrk;  void NewCommon(bool onlyTerVeget), UpdTrees();
+	void CreateTerrain(bool bNewHmap=false, bool bTer=true), CreateBltTerrain(), GetTerAngles(int xb,int yb,int xe,int ye);
+	void CreateTrees(), CreateObjects(),DestroyObjects(), UpdObjPick();
+	void CreateFluids(), DestroyFluids(), CreateBltFluids(), UpdFluidBox(), UpdateWaterRTT(Ogre::Camera* cam);
 	void CreateSkyDome(Ogre::String sMater, Ogre::Vector3 scale);
 	bool GetFolderIndex(std::string folderpath, std::list <std::string> & outputfolderlist, std::string extension="");
 
@@ -109,6 +108,8 @@ protected:
 	std::vector<Ogre::Entity*> vFlEnt;
 	std::vector<Ogre::SceneNode*> vFlNd;
 	int iFlCur;  bool bRecreateFluids;
+	//  objects
+	int iObjCur;
 	
 	
 	///  terrain
@@ -144,21 +145,26 @@ protected:
 	///<>  terrain edit, brush
 	void updBrush();  bool bTerUpd,bTerUpdBlend;  char sBrushTest[512];  int curBr;
 	float mBrSize[ED_ALL],mBrIntens[ED_ALL], *mBrushData, terSetH,
-		mBrPow[ED_ALL],mBrFq[ED_ALL];  int mBrOct[ED_ALL];
+		mBrPow[ED_ALL],mBrFq[ED_ALL];  int mBrOct[ED_ALL];  float* pBrFmask, mBrFilt,mBrFiltOld;
 	enum EBrShape {   BRS_Triangle=0, BRS_Sinus, BRS_Noise, BRS_ALL  } mBrShape[ED_ALL];
 	const static Ogre::String csBrShape[BRS_ALL];
 
 	bool getEditRect(Ogre::Vector3& pos, Ogre::Rect& brushrect, Ogre::Rect& maprect, int size, int& cx, int& cy);
+
 	void deform(Ogre::Vector3 &pos, float dtime, float brMul);
 	void height(Ogre::Vector3 &pos, float dtime, float brMul);
-	void calcSmoothFactor(Ogre::Vector3 &pos, float& avg, int& sample_count);
+
 	void smooth(Ogre::Vector3 &pos, float dtime);
 	void smoothTer(Ogre::Vector3 &pos, float avg, float dtime);
+	void calcSmoothFactor(Ogre::Vector3 &pos, float& avg, int& sample_count);
+
+	void filter(Ogre::Vector3 &pos, float dtime, float brMul);
 
 	//void splat(Ogre::Vector3 &pos, float dtime);
 	//void paint(Ogre::Vector3 &pos, float dtime);
 	//void splatGrass(Ogre::Vector3 &pos, float dtime);
 	//bool update(float dtime);
+
 
 	//  trees
 	class Forests::PagedGeometry *trees, *grass;
@@ -171,7 +177,8 @@ protected:
 	bool LoadStartPos(),SaveStartPos(std::string path);  void UpdStartPos();
 	std::vector <MATHVECTOR <float, 3> > vStartPos;
 	std::vector <QUATERNION <float> >    vStartRot;
-	Ogre::SceneNode* ndCar,*ndStBox;	Ogre::Entity* entCar,*entStBox;
+	Ogre::SceneNode* ndCar,*ndStBox,*ndFluidBox,*ndObjBox;
+	Ogre::Entity*  entCar,*entStBox,*entFluidBox,*entObjBox;
 	void togPrvCam();
 
 
@@ -180,14 +187,14 @@ protected:
 	///-----------------------------------------------------------------------------------------------------------------	
 	//  size
 	void SizeGUI(); void doSizeGUI(MyGUI::EnumeratorWidgetPtr);
-	std::vector<MyGUI::TabControl*> vSubTabs;
+	std::vector<MyGUI::TabControl*> vSubTabsEdit,vSubTabsHelp,vSubTabsOpts;
 
 	//  shortcuts
 	typedef MyGUI::WidgetPtr WP;
 	typedef std::list <std::string> strlist;
 	//  slider event and its text field for value
 	#define SLV(name)  void sl##name(SL);  MyGUI::StaticTextPtr val##name;
-	#define SL  MyGUI::ScrollBar* wp, size_t val						//  slider event args
+	#define SL  MyGUI::Slider* wp, float val			//  slider event args
 	#define CMB  MyGUI::ComboBoxPtr cmb, size_t val		//  combo event args
 	#define TAB  MyGUI::Tab* tab, size_t id			//  tab event args
 
@@ -249,10 +256,19 @@ protected:
 	void SetGuiFromXmls();  bool noBlendUpd;
 
 
-	//  brush & road windows texts
-	const static int BR_TXT=6, RD_TXT=14, RDS_TXT=9, FL_TXT=6;
-	MyGUI::StaticTextPtr brTxt[BR_TXT], rdTxt[RD_TXT],rdTxtSt[RDS_TXT], flTxt[FL_TXT];
+	//  tool windows texts
+	const static int
+		BR_TXT=6, RD_TXT=14,RDS_TXT=9,
+		ST_TXT=6, FL_TXT=6, OBJ_TXT=6;
+	MyGUI::StaticTextPtr
+		brTxt[BR_TXT], rdTxt[RD_TXT],rdTxtSt[RDS_TXT],
+		stTxt[ST_TXT], flTxt[FL_TXT], objTxt[OBJ_TXT];
 	MyGUI::StaticImagePtr brImg;  MyGUI::TabPtr wndTabs;
+
+	//  main menu
+	void toggleGui(bool toggle=false), GuiShortcut(WND_Types wnd, int tab, int subtab=-1);
+	void MainMenuBtn(MyGUI::WidgetPtr);
+	void MenuTabChg(MyGUI::TabPtr, size_t);
 
 
 	//  checks
@@ -343,6 +359,9 @@ protected:
 		edRdSkirtLen,edRdSkirtH, edRdMergeLen,edRdLodPLen,
 		edRdColN,edRdColR, edRdPwsM,edRdPlsM;
 	void editRoad(MyGUI::EditPtr);
+
+	//  [Objects]
+	std::vector<std::string> vObjNames;  int iObjNew;
 	
 
 	//  [Tools]  ----

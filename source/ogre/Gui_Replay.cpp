@@ -5,6 +5,7 @@
 #include "OgreGame.h"
 #include "FollowCamera.h"
 #include <boost/filesystem.hpp>
+#include <time.h>
 #include "common/Gui_Def.h"
 using namespace std;
 using namespace Ogre;
@@ -18,7 +19,7 @@ void App::slRplPosEv(SL)  // change play pos
 {
 	if (!bRplPlay)  return;
 	double oldt = pGame->timer.GetReplayTime(0);
-	double v = val/res;  v = std::max(0.0, std::min(1.0, v));  v *= replay.GetTimeLength();
+	double v = val;  v = std::max(0.0, std::min(1.0, v));  v *= replay.GetTimeLength();
 	pGame->timer.SetReplayTime(0, v);
 
 	FollowCamera* fCam = (*carModels.begin())->fCam;
@@ -33,7 +34,7 @@ void App::btnRplLoad(WP)  // Load
 	int i = rplList->getIndexSelected();
 	if (i == MyGUI::ITEM_NONE)  return;
 
-	String name = rplList->getItemNameAt(i);
+	String name = rplList->getItemNameAt(i).substr(7);
 	string file = (pSet->rpl_listview == 2 ? PATHMANAGER::GetGhostsPath() : PATHMANAGER::GetReplayPath()) + "/" + name + ".rpl";
 
 	if (!replay.LoadFile(file))
@@ -44,19 +45,20 @@ void App::btnRplLoad(WP)  // Load
 	}
 	else  // car, track change
 	{
-		string car = replay.header.car, trk = replay.header.track;
-		bool usr = replay.header.track_user == 1;
+		const ReplayHeader& h = replay.header;
+		string car = h.car, trk = h.track;
+		bool usr = h.track_user == 1;
 
 		//  set game config from replay
 		pSet->game.car[0] = car;  pSet->game.track = trk;  pSet->game.track_user = usr;
-		pSet->game.car_hue[0] = replay.header.hue[0];  pSet->game.car_sat[0] = replay.header.sat[0];  pSet->game.car_val[0] = replay.header.val[0];
-		pSet->game.trees = replay.header.ver < 6 ? 1.f : replay.header.trees;  // older didnt have trees saved, so use default 1
-		pSet->game.local_players = replay.header.numPlayers;
-		LogO("RPL btn Load  players: "+toStr(replay.header.numPlayers)+" netw: "+ toStr(replay.header.networked));
+		pSet->game.car_hue[0] = h.hue[0];  pSet->game.car_sat[0] = h.sat[0];  pSet->game.car_val[0] = h.val[0];
+		pSet->game.trees = h.ver < 6 ? 1.f : h.trees;  // older didnt have trees saved, so use default 1
+		pSet->game.local_players = h.numPlayers;
+		LogO("RPL btn Load  players: "+toStr(h.numPlayers)+" netw: "+ toStr(h.networked));
 
-		for (int p=1; p < replay.header.numPlayers; ++p)
-		{	pSet->game.car[p] = replay.header.cars[p-1];
-			pSet->game.car_hue[p] = replay.header.hue[p];  pSet->game.car_sat[p] = replay.header.sat[p];  pSet->game.car_val[p] = replay.header.val[p];
+		for (int p=1; p < h.numPlayers; ++p)
+		{	pSet->game.car[p] = h.cars[p-1];
+			pSet->game.car_hue[p] = h.hue[p];  pSet->game.car_sat[p] = h.sat[p];  pSet->game.car_val[p] = h.val[p];
 		}
 		newGameRpl = true;
 		btnNewGame(0);
@@ -89,31 +91,39 @@ void App::btnRplSave(WP)  // Save
 void App::listRplChng(List* li, size_t pos)
 {
 	size_t i = li->getIndexSelected();  if (i == ITEM_NONE)  return;
-	String name = li->getItemNameAt(i);
+	String name = li->getItemNameAt(i).substr(7);
 	string file = (pSet->rpl_listview == 2 ? PATHMANAGER::GetGhostsPath() : PATHMANAGER::GetReplayPath()) + "/" + name + ".rpl";
 	if (!valRplName)  return;  valRplName->setCaption(name);
-	if (!valRplInfo)  return;
+	if (!valRplInfo)  return;  edRplName->setCaption(name);
 	
-	//  load replay header upd text descr
-	Replay rpl;
+	//  load replay header, upd info text
+	Replay rpl;  char stm[128];
 	if (rpl.LoadFile(file,true))
 	{
-		String ss = String(TR("#{Track}: ")) + rpl.header.track + (rpl.header.track_user ? "  *user*" : "");
+		String ss = String(TR("#{Track}: ")) + GetSceneryColor(rpl.header.track)+rpl.header.track + (rpl.header.track_user ? "  *user*" : "");
 		valRplName->setCaption(ss);
 
 		ss = String(TR("#{Car}: ")) + rpl.header.car + "       "+
 			(rpl.header.numPlayers == 1 ? "" : (TR("#{Players}: ") + toStr(rpl.header.numPlayers))) + "  " +
-			(rpl.header.networked == 0 ? "" : "M"/*TR("#{Multiplayer}")*/) +
-			//(rpl.header.cars[0][1] != 0 ? " , " + rpl.header.cars[1] : "") +
+			(rpl.header.networked == 0 ? "" : "M") +  //TR("#{Multiplayer}")
 			"\n" + TR("#{RplTime}: ") + GetTimeString(rpl.GetTimeLength());
+		if (rpl.header.networked == 1)  // list nicks
+			ss += String("\n#90C0E0")+rpl.header.nicks[0]+"  "+rpl.header.nicks[1]+"  "+rpl.header.nicks[2]+"  "+rpl.header.nicks[3];
+		//else  // other cars, car colors ..
+			//ss += String("\n#90C0E0")+rpl.header.cars[0]+"  "+rpl.header.cars[1]+"  "+rpl.header.cars[2];
 		valRplInfo->setCaption(ss);
 
+		//  file stats
 		int size = boost::filesystem::file_size(file);
-		ss = String(TR("#{RplFileSize}:")) + fToStr( float(size)/1000000.f, 2,5) + TR(" #{UnitMB}\n") +  //todo: file date..
+		std::time_t ti = boost::filesystem::last_write_time(file);
+		if (!std::strftime(stm, 126, "%d.%b'%y  %a %H:%M", std::localtime(&ti)))  stm[0]=0;
+		
+		ss =/*"Time: "+*/String(stm)+"\n"+
+			String(TR("#{RplFileSize}: ")) + fToStr( float(size)/1000000.f, 2,5) + TR(" #{UnitMB}\n") +
 			TR("#{RplVersion}: ") + toStr(rpl.header.ver) + "     " + toStr(rpl.header.frameSize) + "B";
 		if (valRplInfo2)  valRplInfo2->setCaption(ss);
 	}
-	//edRplDesc  edRplName
+	//edRplDesc
 }
 
 
@@ -127,24 +137,15 @@ void App::chkRplAutoRec(WP wp)
     chk->setStateSelected(bRplRec);
 }
 
-void App::chkRplChkGhost(WP wp)
-{
-	ChkEv(rpl_ghost);
-}
+void App::chkRplChkGhost(WP wp){		ChkEv(rpl_ghost);		}
+void App::chkRplChkBestOnly(WP wp){		ChkEv(rpl_bestonly);	}
+void App::chkRplChkAlpha(WP wp){		ChkEv(rpl_alpha);		}
+void App::chkRplChkPar(WP wp){			ChkEv(rpl_ghostpar);	}
 
-void App::chkRplChkBestOnly(WP wp)
+void App::slRplNumViewports(SL)
 {
-	ChkEv(rpl_bestonly);
-}
-
-void App::chkRplChkAlpha(WP wp)
-{
-	ChkEv(rpl_alpha);
-}
-
-void App::chkRplChkPar(WP wp)
-{
-	ChkEv(rpl_ghostpar);
+	int v = 1.f + 3.f * val;	if (bGI)  pSet->rpl_numViews = v;
+	if (valRplNumViewports)  valRplNumViewports->setCaption(toStr(v));
 }
 
 
@@ -212,7 +213,14 @@ void App::updReplaysList()
 	{
 		String s = *i;  s = StringUtil::replaceAll(s,".rpl","");
 		if (pSet->rpl_listview != 1 || StringUtil::startsWith(s,pSet->game.track, false))
-			rplList->addItem(s);
+		{
+			String ch = " ";  // 1st A-Z char for scenery
+			int l = s.length();
+			for (int i=0; i < l; ++i)
+				if (s[i] >= 'A' && s[i] <= 'Z') {  ch = s[i];  break;  }
+
+			rplList->addItem(GetSceneryColor(ch) + s);
+		}
 	}
 }
 
@@ -221,21 +229,20 @@ void App::updReplaysList()
 void App::btnRplDelete(WP)
 {
 	size_t i = rplList->getIndexSelected();  if (i == ITEM_NONE)  return;
-	String name = rplList->getItemNameAt(i);
+	string name = rplList->getItemNameAt(i).substr(7);
+
 	Message* message = Message::createMessageBox(
 		"Message", "Delete Replay ?", name,  // #{..
 		MessageBoxStyle::IconQuest | MessageBoxStyle::Yes | MessageBoxStyle::No);
 	message->eventMessageBoxResult += newDelegate(this, &App::msgRplDelete);
-	//message->setUserString("FileName", fileName);
 }
 void App::msgRplDelete(Message* sender, MessageBoxStyle result)
 {
-	if (result != MessageBoxStyle::Yes)
-		return;
+	if (result != MessageBoxStyle::Yes)  return;
 	size_t i = rplList->getIndexSelected();  if (i == ITEM_NONE)  return;
-	String name = rplList->getItemNameAt(i);
-	
+	string name = rplList->getItemNameAt(i).substr(7);
 	string file = (pSet->rpl_listview == 2 ? PATHMANAGER::GetGhostsPath() : PATHMANAGER::GetReplayPath()) +"/"+ name + ".rpl";
+
 	if (boost::filesystem::exists(file))
 		boost::filesystem::remove(file);
 	updReplaysList();
@@ -244,6 +251,27 @@ void App::msgRplDelete(Message* sender, MessageBoxStyle result)
 //  Rename
 void App::btnRplRename(WP)
 {
-	//if (boost::filesystem::exists(from.c_str()))
-	//	boost::filesystem::rename(from.c_str(), to.c_str());
+	if (pSet->rpl_listview == 2)  return;  // cant rename ghosts
+	size_t i = rplList->getIndexSelected();  if (i == ITEM_NONE)  return;
+	string name = rplList->getItemNameAt(i).substr(7);
+	string edit = edRplName->getCaption();
+
+	if (name == edit)  // same name
+	{	Message::createMessageBox(
+			"Message", "Rename Replay", "Same names.\n",  // #{..
+			MessageBoxStyle::IconInfo | MessageBoxStyle::Ok);
+		return;  }
+	
+	string file = PATHMANAGER::GetReplayPath() + "/" + name + ".rpl";
+	string fileNew = PATHMANAGER::GetReplayPath() + "/" + edit + ".rpl";
+
+	if (boost::filesystem::exists(fileNew))
+	{	Message::createMessageBox(
+			"Message", "Rename Replay", "File already exists.\n",  // #{..
+			MessageBoxStyle::IconInfo | MessageBoxStyle::Ok);
+		return;  }
+
+	if (boost::filesystem::exists(file))
+		boost::filesystem::rename(file, fileNew);
+	updReplaysList();
 }

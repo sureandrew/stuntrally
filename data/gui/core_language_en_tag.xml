@@ -32,7 +32,9 @@
 	<Tag name="LS_SCENE">Loading scene</Tag>
 	<Tag name="LS_CAR">Loading car</Tag>
 	<Tag name="LS_TER">Loading terrain</Tag>
-	<Tag name="LS_TRACK">Loading track</Tag>
+	<Tag name="LS_ROAD">Loading Road</Tag>
+	<Tag name="LS_OBJS">Loading Objects</Tag>
+	<Tag name="LS_TREES">Loading Trees</Tag>
 	<Tag name="LS_MISC">Finishing</Tag>
 	
 	<!--  HUD  -->
@@ -44,6 +46,7 @@
 	<Tag name="TBLap">Lap</Tag>
 	<Tag name="TBPlace">Place</Tag>
 	<Tag name="CamInfoStrings">Type,Yaw,Pitch,Dist,Height,Speed,Offset,LEFT,RIGHT,Middle,Wheel,shift,Rotate,reset,move,H,Pos</Tag>
+	<Tag name="Graphs">Graphs</Tag>
 	
 <!--  ............................................................................................................................  -->
 
@@ -96,10 +99,8 @@
 
 
 	<!--  Track  -->
-	<Tag name="ChangeTrack">Change Track</Tag>
 	<Tag name="Track">Track</Tag>
 	<Tag name="TipTrackList">Tracks list, click to select (and see info). Press Enter to drive on it. (or [Change track] and then [New Game])</Tag>
-	<Tag name="TipChangeTrack">Sets current track to that selected in list. Press [New Game] to start it after.</Tag>
 
 	<Tag name="Reverse">Reverse</Tag>
 	<Tag name="TipReverse">Reverse track direction.</Tag>
@@ -220,6 +221,7 @@
 
 	<Tag name="VegetCol">Vegetation collision</Tag>
 	<Tag name="CarCollis">Cars collision</Tag>
+	<Tag name="RoadWallFullCollis">Road wall full collision</Tag>
 
 	<Tag name="Boost">Boost</Tag>
 	<Tag name="Flip">Flip</Tag>
@@ -249,6 +251,7 @@
 	<Tag name="RplBestOnly">Save ghost only for best time</Tag>
 	<Tag name="RplAlpha">Transparent ghost</Tag>
 	<Tag name="RplParticles">Particles (for not transparent ghost)</Tag>
+	<Tag name="RplMaxNumViewports">Max. number of viewports (see less, for more player replays)</Tag>
 
 	<Tag name="RplAll">All</Tag>
 	<Tag name="RplCurrent">Current</Tag>
@@ -296,11 +299,11 @@
 	<Tag name="filmgrain">Film Grain</Tag>
 	<Tag name="softparticles">Soft Particles</Tag>
 	<Tag name="DepthOfField">Depth of Field</Tag>
-  <Tag name="Near">Near</Tag>
-  <Tag name="Far">Far</Tag>
+	<Tag name="Near">Near</Tag>
+	<Tag name="Far">Far</Tag>
 
 
-  <!--  Graphics  -->
+	<!--  Graphics  -->
 	<Tag name="Graphics">Graphics</Tag>
 	<Tag name="NeedNewGame">* need New Game</Tag>
 	<Tag name="RestartApply">Restart game, to apply *changes.</Tag>
@@ -365,6 +368,7 @@
 	<Tag name="OpponentsList">Opponents List</Tag>
 	<Tag name="OpponentsSorted">Opponents Sorted</Tag>
 	<Tag name="CameraInfo">Camera info</Tag>
+	<Tag name="CameraAutoTilt">Camera auto tilt on slopes</Tag>
 	<Tag name="CheckArrow">Checkpoint Arrow</Tag>
 	<Tag name="CountdownTime">Race countdown time</Tag>
 
@@ -457,6 +461,7 @@
 	<Tag name="InputRplCtrl1">Backspace - show/hide controls (hold ctrl to use mouse)</Tag>
 	<Tag name="InputRplCtrl2">P - pause/unpause replay</Tag>
 	<Tag name="InputRplCtrl3">[ , ] - wind backwards/forwards (shift - slow, ctrl,alt - fast)</Tag>
+	<Tag name="InputRplCtrl4">K, L - change camera view to other player</Tag>
 
 
 	<!--  Sound  -->
@@ -465,7 +470,13 @@
 	<Tag name="VolMaster">Master</Tag>
 	<Tag name="Engine">Engine</Tag>
 	<Tag name="Tires">Tires</Tag>
+	<Tag name="Suspension">Suspension</Tag>
 	<Tag name="Environment">Environment</Tag>
+
+	<Tag name="FluidSplash">Fluid Splash</Tag>
+	<Tag name="FluidCont">Fluid Cont.</Tag>
+	<Tag name="CarCrash">Car Crash</Tag>
+	<Tag name="CarScrap">Car Scrap</Tag>
 
 
 	<!--  About  -->
@@ -476,7 +487,7 @@
 	<Tag name="BasedOn">based on</Tag>
 	<Tag name="AndUsing">and using</Tag>
 	<Tag name="ProjectPage">project&apos;s page:</Tag>
-	<Tag name="GameVersion">1.5</Tag>
+	<Tag name="GameVersion">1.7</Tag>
 	<Tag name="PageURL">http://code.google.com/p/vdrift-ogre/</Tag>
 		
 	
@@ -501,6 +512,7 @@
 	<Tag name="NewDup">New (Duplicate)</Tag>
 	<Tag name="Rename">Rename</Tag>
 	<Tag name="Delete">Delete</Tag>
+	
 
 	<!--  Sun  -->
 	<Tag name="Sun">Sun</Tag>
@@ -700,8 +712,9 @@
 	<!--  Terrain  -->
 	<Tag name="EditTerrainMode">Edit Terrain mode</Tag>
 	<Tag name="InputTerDeform">D - Deform  (LMB up, RMB down)</Tag>
-	<Tag name="InputTerSmooth">S - Smooth</Tag>
-	<Tag name="InputTerHeight">E - Height set (RMB change height value)</Tag>
+	<Tag name="InputTerSmooth">S - Smooth  (flatten)</Tag>
+	<Tag name="InputTerHeight">E - Height set  (RMB change height value)</Tag>
+	<Tag name="InputTerFilter">F - Filter  (remove noise)</Tag>
 
 	<Tag name="InputTerPaint">A - Paint Textures (layers)</Tag>
 	<Tag name="InputPaintColor">C - Paint Color</Tag>
@@ -774,10 +787,11 @@
 
 
 	<!--  Start pos  -->
+	<Tag name="CarStartPos">Car Start Pos</Tag>
 	<Tag name="InputStart">Start</Tag>
 	<Tag name="InputStartPos">Q - edit car start pos</Tag>
-	<Tag name="InputStartLMB">LMB - move  RMB - height</Tag>
-	<Tag name="InputStartAltLMB">alt-LMB - rotate  alt-RMB - pitch</Tag>
+	<Tag name="InputStartLMB">ctrl-LMB - place   LMB - move   RMB - height</Tag>
+	<Tag name="InputStartAltLMB">alt-LMB - rotate   alt-RMB - pitch</Tag>
 	<Tag name="InputStartAltMMB">alt-MMB - reset rotation</Tag>
 
 	<Tag name="InputStartHeight">[,]  -  adjust start box height (bigger for pipes)</Tag>
@@ -794,11 +808,22 @@
 	<Tag name="InputFluidsDel">Del - delete current</Tag>
 	<Tag name="InputFluidsMove">LMB - move   RMB - height</Tag>
 	<Tag name="InputFluidsSize">alt-LMB - size   alt-RMB - depth</Tag>
-	<Tag name="InputFluidsRot">MMB - rotate yaw</Tag>
 	<Tag name="InputFluidsType">-,=  - change fluid type (water,mud,etc.)</Tag>
 	<Tag name="InputFluidsTile">[,]  - change texture tiling</Tag>
 	<Tag name="InputFluidsTileY">; &apos;  - change texture tiling, one coord. only</Tag>
 	<Tag name="InputFluidsUpdate">F10  - update depth map, after terrain deform near shore</Tag>
+
+
+	<!--  Objects  -->
+	<Tag name="Objects">Objects</Tag>
+	<Tag name="InputObjectsMode">X - edit Objects</Tag>
+	<Tag name="InputObjectsPrevNext">PgUp,PgDn (or Wheel) - previous/next object</Tag>
+	<Tag name="InputObjectsIns">Ins - insert new, at cursor</Tag>
+	<Tag name="InputObjectsDel">Del - delete current</Tag>
+	<Tag name="InputObjectsMove">LMB - move   RMB - height</Tag>
+	<Tag name="InputObjectsRot">MMB - rotate Y</Tag>
+	<Tag name="InputObjectsScale">alt-LMB - scale   alt-RMB - scale Y only</Tag>
+	<Tag name="InputObjectsType">[,]  - change object type</Tag>
 	
 		
 <!--  ............................................................................................................................  -->

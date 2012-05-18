@@ -8,13 +8,15 @@
 #include "SplitScreen.h"
 #include "common/RenderConst.h"
 #include "common/MaterialGen/MaterialFactory.h"
-#include "../network/gameclient.hpp"
+#include "common/GraphView.h"
 
+#include "../network/gameclient.hpp"
 #include "../btOgre/BtOgrePG.h"
 #include "../btOgre/BtOgreGP.h"
-
-#include "boost/thread.hpp"
 #include "../paged-geom/PagedGeometry.h"
+
+#include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 
 #include <MyGUI_OgrePlatform.h>
 #include "common/MyGUI_D3D11.h"
@@ -151,6 +153,11 @@ void App::NewGame()
 void App::LoadCleanUp()  // 1 first
 {
 	updMouse();
+	
+	DestroyObjects();
+	
+	DestroyGraphs();
+	
 
 	// rem old track
 	if (resTrk != "")  Ogre::Root::getSingletonPtr()->removeResourceLocation(resTrk);
@@ -203,7 +210,8 @@ void App::LoadCleanUp()  // 1 first
 void App::LoadGame()  // 2
 {
 	//  viewports
-	mSplitMgr->mNumViewports = bRplPlay ? replay.header.numPlayers : pSet->game.local_players;  // set num players
+	int numRplViews = std::max(1, std::min( replay.header.numPlayers, pSet->rpl_numViews ));
+	mSplitMgr->mNumViewports = bRplPlay ? numRplViews : pSet->game.local_players;  // set num players
 	mSplitMgr->Align();
 	mPlatform->getRenderManagerPtr()->setActiveViewport(mSplitMgr->mNumViewports);
 	
@@ -215,7 +223,7 @@ void App::LoadGame()  // 2
 	// this is just here because vdrift car has to be created first
 	std::list<Camera*>::iterator camIt = mSplitMgr->mCameras.begin();
 	
-	int numCars = mClient ? mClient->getPeerCount()+1 : mSplitMgr->mNumViewports;  // networked or splitscreen
+	int numCars = mClient ? mClient->getPeerCount()+1 : pSet->game.local_players;  // networked or splitscreen
 	int i;
 	for (i = 0; i < numCars; ++i)
 	{
@@ -237,11 +245,12 @@ void App::LoadGame()  // 2
 			if (i == 0)  nick = pSet->nickname;
 			else  nick = mClient->getPeer(startpos_index).name;
 		}
-		Camera* cam = (et == CarModel::CT_LOCAL ? *camIt : 0);
+		Camera* cam = 0;
+		if (et == CarModel::CT_LOCAL && camIt != mSplitMgr->mCameras.end())
+		{	cam = *camIt;  ++camIt;  }
+		
 		CarModel* car = new CarModel(i, et, carName, mSceneMgr, pSet, pGame, &sc, cam, this, startpos_index);
 		carModels.push_back(car);
-		
-		if (et == CarModel::CT_LOCAL)  ++camIt;
 		
 		if (nick != "")  // set remote nickname
 		{	car->sDispName = nick;
@@ -277,18 +286,10 @@ void App::LoadScene()  // 3
 	if (ter)  // load scene
 		sc.LoadXml(TrkDir()+"scene.xml");
 	else
-	{	sc.Default();  sc.td.hfHeight = NULL;  sc.td.hfAngle = NULL;  }
+	{	sc.Default();  sc.td.hfHeight = sc.td.hfAngle = NULL;  sc.td.layerRoad.smoke = 1.f;  }
 
 	//  water RTT
-	mWaterRTT.setViewerCamera(mSplitMgr->mCameras.front());
-	mWaterRTT.setRTTSize(ciShadowSizesA[pSet->water_rttsize]);
-	mWaterRTT.setReflect(MaterialFactory::getSingleton().getReflect());
-	mWaterRTT.setRefract(MaterialFactory::getSingleton().getRefract());
-	mWaterRTT.mSceneMgr = mSceneMgr;
-	if (!sc.fluids.empty())
-		mWaterRTT.setPlane(Plane(Vector3::UNIT_Y, sc.fluids.front().pos.y));
-	mWaterRTT.recreate();
-	mWaterRTT.setActive(!sc.fluids.empty());
+	UpdateWaterRTT(mSplitMgr->mCameras.front());
 
 	/// generate materials
 	materialFactory->generate();
@@ -296,7 +297,7 @@ void App::LoadScene()  // 3
 
 	//  fluids
 	CreateFluids();
-
+	
 
 	//  rain  -----
 	if (!pr && sc.rainEmit > 0)  {
@@ -413,41 +414,51 @@ void App::LoadTerrain()  // 5
 {
 	bool ter = IsTerTrack();
 	CreateTerrain(false,ter);  // common
+	if (ter)
+		CreateBltTerrain();
 	
-	// Assign stuff to cars
+	// assign stuff to cars
 	for (std::vector<CarModel*>::iterator it=carModels.begin(); it!=carModels.end(); it++)
 	{
 		(*it)->terrain = terrain;
 		(*it)->blendMtr = blendMtr;
 		(*it)->blendMapSize = blendMapSize;
 	}
-}
 
-void App::LoadTrack()  // 6
-{
-	bool ter = IsTerTrack();
-	if (!ter)	//  track
+	if (!ter)	// vdrift track
 	{
-		CreateTrack();
+		CreateVdrTrack();
 		CreateMinimap();
 		//CreateRacingLine();  //?-
 		//CreateRoadBezier();  //-
 	}
-	if (ter)	//  Terrain
-	{
-		CreateBltTerrain();
-		CreateProps();  //-
-		CreateRoad();
-		CreateTrees();
-	}
 }
 
-void App::LoadMisc()  // 7 last
+void App::LoadRoad()  // 6
+{
+	if (IsTerTrack())
+		CreateRoad();
+}
+
+void App::LoadObjects()  // 7
+{
+	if (IsTerTrack())
+		CreateObjects();
+}
+
+void App::LoadTrees()  // 8
+{
+	if (IsTerTrack())
+		CreateTrees();
+}
+
+
+void App::LoadMisc()  // 9 last
 {
 	if (pGame && pGame->cars.size() > 0)  //todo: move this into gui track tab chg evt, for cur game type
 		UpdGuiRdStats(road, sc, sListTrack, pGame->timer.GetBestLap(0, pSet->game.trackreverse));  // current
 
-	CreateHUD();
+	CreateHUD(false);
 	// immediately hide it
 	ShowHUD(true);
 	
@@ -537,7 +548,7 @@ void App::NewGameDoLoad()
 		mSplitMgr->mGuiViewport->setClearEveryFrame(true, FBT_DEPTH);
 
 		ChampLoadEnd();
-		//boost::this_thread::sleep(boost::posix_time::milliseconds(6000 * mClient->getId())); // Test loading syncronization
+		//boost::this_thread::sleep(boost::posix_time::milliseconds(6000 * mClient->getId())); // Test loading synchronization
 		bLoadingEnd = true;
 		return;
 	}
@@ -548,9 +559,13 @@ void App::NewGameDoLoad()
 		case LS_CLEANUP:	LoadCleanUp();	perc = 3;	break;
 		case LS_GAME:		LoadGame();		perc = 10;	break;
 		case LS_SCENE:		LoadScene();	perc = 20;	break;
-		case LS_CAR:		LoadCar();		perc = 45;	break;
-		case LS_TER:		LoadTerrain();	perc = 70;	break;
-		case LS_TRACK:		LoadTrack();	perc = 75;	break;
+		case LS_CAR:		LoadCar();		perc = 30;	break;
+
+		case LS_TER:		LoadTerrain();	perc = 40;	break;
+		case LS_ROAD:		LoadRoad();		perc = 50;	break;
+		case LS_OBJS:		LoadObjects();	perc = 60;	break;
+		case LS_TREES:		LoadTrees();	perc = 70;	break;
+
 		case LS_MISC:		LoadMisc();		perc = 80;	break;
 	}
 
@@ -567,12 +582,9 @@ void App::NewGameDoLoad()
 //---------------------------------------------------------------------------------------------------------------
 bool App::IsTerTrack()
 {
-	//  track: vdrift / terrain
+	//  vdrift track doesn't have road.xml
 	String sr = TrkDir()+"road.xml";
-	std::ifstream fr(sr.c_str());
-	bool ter = fr.good(); //!fail()
-	if (ter)  fr.close();
-	return ter;
+	return boost::filesystem::exists(sr);
 }
 
 
@@ -589,7 +601,6 @@ void App::CreateRoad()
 	road = new SplineRoad(pGame);  // sphere.mesh
 	road->Setup("", 0.7,  terrain, mSceneMgr, *mSplitMgr->mCameras.begin());
 	road->iTexSize = pSet->tex_size;
-	road->bForceShadowCaster = (pSet->shadow_type == 3);
 	
 	String sr = TrkDir()+"road.xml";
 	road->LoadFile(TrkDir()+"road.xml");
@@ -599,81 +610,12 @@ void App::CreateRoad()
 		carModels[i]->ResetChecks(true);
 
 	UpdPSSMMaterials();  ///+~-
+
+	road->bCastShadow = pSet->shadow_type >= 3;
+	road->bRoadWFullCol = pSet->gui.collis_roadw;
+	road->RebuildRoadInt();
 }
 
-
-///  props  ... .. . . .
-//------------------------------------------------------------------------------
-
-void App::CreateProps()
-{
-	/// . dyn objs +
-	if (0)
-	for (int j=-2; j<1; j++)
-	for (int i=-2; i<1; i++)
-	{
-		btCollisionShape* shape;
-		btScalar s = Ogre::Math::RangeRandom(1,3);
-		// switch(rand() % 5)
-		switch( (50+i+j*3) % 6)
-		{
-		case 0:  shape = new btBoxShape(s*btVector3(0.4,0.3,0.5));  break;
-		case 1:  shape = new btSphereShape(s*0.5);  break;
-		case 2:  shape = new btCapsuleShapeZ(s*0.4,s*0.5);  break;
-		case 3:  shape = new btCylinderShapeX(s*btVector3(0.5,0.7,0.4));  break;
-		case 4:  shape = new btCylinderShapeZ(s*btVector3(0.5,0.6,0.7));  break;
-		case 5:  shape = new btConeShapeX(s*0.4,s*0.6);  break;
-		}
-
-		btTransform tr(btQuaternion(0,0,0), btVector3(-5+i*5 -20, 5+j*5 -25,0));
-		btDefaultMotionState * ms = new btDefaultMotionState();
-		ms->setWorldTransform(tr);
-
-		btRigidBody::btRigidBodyConstructionInfo ci(220*s+rand()%500, ms, shape, s*21*btVector3(1,1,1));
-		ci.m_restitution = 0.9;
-		ci.m_friction = 0.9;
-		ci.m_linearDamping = 0.4;
-		pGame->collision.AddRigidBody(ci);
-	}
-	
-	//.  props
-	if (0)  {
-		String sn[9] = {"garage_stand", "indicator", "stop_sign",
-			"Cone1", "Barrel1", "2x4_1", "concrete1", "crate1", "Dumpster1"}; //plywood1
-			// "cube.1m.smooth.mesh", "capsule.50cmx1m.mesh", "sphere.mesh"
-		int a = 0;
-		for (int j=-1; j<1; j++)
-		for (int i=-1; i<1; i++)
-		{
-			Vector3 pos = Vector3(-2+i*2,-1,-2+j*2);
-			Quaternion rot = Quaternion::IDENTITY;
-			//int a = (100 + j*10 + i) % 9; //rand() % 9;
-
-			// Ogre stuff
-			String s = StringConverter::toString(j*10+i);
-			Entity* ent = mSceneMgr->createEntity(
-				"Ent"+s, sn[a % 9] + ".mesh");  a++;
-			SceneNode* nod = mSceneMgr->getRootSceneNode()->createChildSceneNode(
-				"Node"+s, pos, rot);
-			nod->attachObject(ent);
-
-			// Shape
-			BtOgre::StaticMeshToShapeConverter converter(ent);
-			btCollisionShape* shp = converter.createBox();  // createSphere();
-
-			// calculate inertia
-			btScalar mass = 5;  btVector3 inertia;
-			shp->calculateLocalInertia(mass, inertia);
-
-			// BtOgre MotionState (connects Ogre and Bullet)
-			BtOgre::RigidBodyState *stt = new BtOgre::RigidBodyState(nod);
-
-			// Body
-			btRigidBody* bdy = new btRigidBody(mass, stt, shp, inertia);
-			pGame->collision.world->addRigidBody(bdy);
-		}
-	}
-}
 
 /*void App::ReloadCar()
 {

@@ -20,9 +20,9 @@ using namespace Ogre;
 App::App(SETTINGS *settings, GAME *game)
 	:pGame(game), ndLine(0), bGI(0), mThread()
 	// ovr
-	,hudGear(0),hudVel(0),hudBoost(0),hudCountdown(0),hudNetMsg(0), hudAbs(0),hudTcs(0)
+	,hudCountdown(0),hudNetMsg(0), hudAbs(0),hudTcs(0)
 	,hudTimes(0), hudWarnChk(0),hudWonPlace(0), hudOppB(0)
-	,ovGear(0),ovVel(0),ovBoost(0),ovCountdown(0),ovNetMsg(0), ovAbsTcs(0), ovCarDbg(0),ovCarDbgTxt(0)
+	,ovCountdown(0),ovNetMsg(0), ovAbsTcs(0), ovCarDbg(0),ovCarDbgTxt(0)
 	,ovCam(0), ovTimes(0), ovWarnWin(0), ovOpp(0)
 	// hud
 	,asp(1)//,  xcRpm(0), ycRpm(0), xcVel(0), ycVel(0)
@@ -37,10 +37,14 @@ App::App(SETTINGS *settings, GAME *game)
 	,valTrees(0), valGrass(0), valTreesDist(0), valGrassDist(0)  // paged
 	,valReflSkip(0), valReflSize(0), valReflFaces(0), valReflDist(0), valWaterSize(0)  // refl
 	,valShaders(0), valShadowType(0), valShadowCount(0), valShadowSize(0), valShadowDist(0), valShadowFilter(0)  // shadow
-	,valSizeGaug(0), valSizeMinimap(0), valZoomMinimap(0), valCountdownTime(0)  // view
-	,bRkmh(0),bRmph(0), chDbgT(0),chDbgB(0), chBlt(0),chBltTxt(0), chFps(0), chProfTxt(0)
-	,chTimes(0),chMinimp(0),chOpponents(0), bnQuit(0)
-	,imgCar(0), imgTrkIco1(0),imgTrkIco2(0)
+	,valSizeGaug(0),valTypeGaug(0), valSizeMinimap(0), valZoomMinimap(0)
+	,valCountdownTime(0),valGraphsType(0),slGraphT(0)  // view
+	,bRkmh(0),bRmph(0), chDbgT(0),chDbgB(0), chBlt(0),chBltTxt(0)
+	,chFps(0), chWire(0), chProfTxt(0), chGraphs(0)
+	,chTimes(0),chMinimp(0),chOpponents(0)
+	,valVolMaster(0),valVolEngine(0),valVolTires(0),valVolSusp(0),valVolEnv(0)  // sounds
+	,valVolFlSplash(0),valVolFlCont(0),valVolCarCrash(0),valVolCarScrap(0)
+	,imgCar(0), imgTrkIco1(0),imgTrkIco2(0), bnQuit(0)
 	,valCar(0), valLocPlayers(0), edFind(0)
 	,valRplPerc(0), valRplCur(0), valRplLen(0), slRplPos(0), rplList(0)
 	,valRplName(0),valRplInfo(0),valRplName2(0),valRplInfo2(0), edRplName(0), edRplDesc(0)
@@ -60,10 +64,11 @@ App::App(SETTINGS *settings, GAME *game)
 	// game
 	,blendMtr(0), iBlendMaps(0), dbgdraw(0), noBlendUpd(0), blendMapSize(513), bListTrackU(0)
 	,grass(0), trees(0), road(0)
-	,pr(0),pr2(0), sun(0), carIdWin(-1), iCurCar(0), bUpdCarClr(1)
-	,lastAxis(-1), axisCnt(0), txtJAxis(0), txtJBtn(0), txtInpDetail(0)
+	,pr(0),pr2(0), sun(0), carIdWin(-1), iCurCar(0), bUpdCarClr(1), iRplCarOfs(0)
+	,lastAxis(-1), axisCnt(0), txtJAxis(0), txtJBtn(0), txtInpDetail(0), panInputDetail(0)
 	,edInputMin(0), edInputMax(0), edInputMul(0), edInputReturn(0), edInputIncrease(0), actDetail(0), cmbInpDetSet(0)
 	,liChamps(0),liStages(0), edChampStage(0),edChampEnd(0), imgChampStage(0), liNetEnd(0)
+	,iEdTire(0),iCurLat(0),iCurLong(0),iCurAlign(0), iUpdTireGr(0)
 {
 	pSet = settings;
 	int i,c;
@@ -93,6 +98,9 @@ App::App(SETTINGS *settings, GAME *game)
 	QUATERNION <double> fix;  fix.Rotate(PI_d/2, 0, 1, 0);
 	qr.w = fix.w();  qr.x = fix.x();  qr.y = fix.y();  qr.z = fix.z();  qFixWh = qr;
 
+	for (i=0; i < 4; ++i)
+	{	txGear[i]=0;  txVel[i]=0;  txBFuel[i]=0;  }
+
 	if (pSet->multi_thr)
 		mThread = boost::thread(boost::bind(&App::UpdThr, boost::ref(*this)));;
 }
@@ -101,8 +109,11 @@ void App::NullHUD()
 {
 	int i,c;
 	for (i=0; i < 4; ++i)
-	{	ndMap[i]=0;  moMap[i]=0;  moRpm[i]=0;  moVel[i]=0;
-		ndRpmBk[i]=0;  ndVelBk[i]=0;  ndVelBm[i]=0;  ndRpm[i]=0;  ndVel[i]=0;
+	{	ndMap[i]=0;  moMap[i]=0;
+		moRpm[i]=0;  moVel[i]=0;
+		ndRpm[i]=0;  ndVel[i]=0;
+		moRpmBk[i]=0;  moVelBk[i]=0;  moVelBm[i]=0;
+		ndRpmBk[i]=0;  ndVelBk[i]=0;  ndVelBm[i]=0;
 		for (c=0; c < 5; ++c)
 		{	vNdPos[i][c]=0;  vMoPos[i][c]=0;  }
 	}
@@ -120,6 +131,7 @@ App::~App()
 	mShutDown = true;
 	if (mThread.joinable())
 		mThread.join();
+
 	delete road;
 	if (mTerrainPaging) {
 		OGRE_DELETE mTerrainPaging;
@@ -160,8 +172,12 @@ void App::setTranslations()
 	loadingStates.insert(std::make_pair(LS_GAME, String(TR("#{LS_GAME}"))));
 	loadingStates.insert(std::make_pair(LS_SCENE, String(TR("#{LS_SCENE}"))));
 	loadingStates.insert(std::make_pair(LS_CAR, String(TR("#{LS_CAR}"))));
+
 	loadingStates.insert(std::make_pair(LS_TER, String(TR("#{LS_TER}"))));
-	loadingStates.insert(std::make_pair(LS_TRACK, String(TR("#{LS_TRACK}"))));
+	loadingStates.insert(std::make_pair(LS_ROAD, String(TR("#{LS_ROAD}"))));
+	loadingStates.insert(std::make_pair(LS_OBJS, String(TR("#{LS_OBJS}"))));
+	loadingStates.insert(std::make_pair(LS_TREES, String(TR("#{LS_TREES}"))));
+
 	loadingStates.insert(std::make_pair(LS_MISC, String(TR("#{LS_MISC}"))));
 }
 
@@ -174,6 +190,9 @@ void App::recreateCarMtr()
 
 void App::destroyScene()
 {
+	for (int i=0; i < graphs.size(); ++i)
+		delete graphs[i];
+
 	for (int i=0; i<4; ++i)
 		pSet->cam_view[i] = carsCamNum[i];
 

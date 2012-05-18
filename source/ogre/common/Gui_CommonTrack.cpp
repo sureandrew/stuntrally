@@ -159,11 +159,11 @@ void App::GuiInitTrack()
 {
 	//  Tracks detailed list
 	//MultiListPtr li = mGUI->findWidget<MultiList>("MListTracks");
-	MyGUI::FactoryManager::getInstance().registerFactory<MultiList2>("Widget");
+	//MyGUI::FactoryManager::getInstance().registerFactory<MultiList2>("Widget");
 	//MyGUI::FactoryManager::getInstance().unregisterFactory<MultiList2>("Widget");
 
 	#ifdef ROAD_EDITOR
-	TabItem* trktab = (TabItem*)mWndOpts->findWidget("TabTrack");
+	TabItem* trktab = (TabItem*)mWndEdit->findWidget("TabTrack");
 	#else
 	TabItem* trktab = (TabItem*)mWndGame->findWidget("TabTrack");
 	#endif
@@ -237,6 +237,9 @@ void App::listTrackChng(MultiList2* li, size_t pos)
 	sListTrack = s;
 	bListTrackU = s1 != s ? 1 : 0;
 
+#ifndef ROAD_EDITOR
+	changeTrack();
+#endif
 	ReadTrkStats();
 }
 

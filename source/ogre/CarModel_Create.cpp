@@ -34,9 +34,12 @@ using namespace Ogre;
 CarModel::CarModel(unsigned int index, eCarType type, const std::string& name,
 	Ogre::SceneManager* sceneMgr, SETTINGS* set, GAME* game, Scene* s,
 	Ogre::Camera* cam, App* app, int startpos_index) :
-	fCam(0), pMainNode(0), pCar(0), terrain(0), resCar(""), mCamera(0), pReflect(0), pApp(app), color(1,1,0),
+	fCam(0), pMainNode(0), pCar(0), terrain(0), resCar(""),
+	mCamera(0), pReflect(0), pApp(app), color(1,1,0),
 	bLightMapEnabled(true), bBraking(false),
-	iCamNextOld(0), bLastChkOld(0), bWrongChk(0), angCarY(0), vStartPos(0,0,0), pNickTxt(0)
+	hideTime(1.f), mbVisible(true),
+	iCamNextOld(0), bLastChkOld(0), bWrongChk(0),
+	angCarY(0), vStartPos(0,0,0), pNickTxt(0)
 {
 	iIndex = index;  sDirname = name;  mSceneMgr = sceneMgr;
 	pSet = set;  pGame = game;  sc = s;  mCamera = cam;  eType = type;
@@ -73,6 +76,7 @@ CarModel::CarModel(unsigned int index, eCarType type, const std::string& name,
 		MATHVECTOR<float, 3> offset(0,0,0);
 		pCar = pGame->LoadCar(sDirname, pos, rot, true, false, type == CT_REMOTE, index);
 		if (!pCar)  LogO("Error creating car " + sDirname);
+		else  pCar->pCarM = this;
 	}
 }
 
@@ -138,8 +142,7 @@ void CarModel::Create(int car)
 	//  --------  Follow Camera  --------
 	if (mCamera)
 	{
-		fCam = new FollowCamera(mCamera);
-		fCam->mGoalNode = pMainNode;
+		fCam = new FollowCamera(mCamera, pSet);
 		fCam->loadCameras();
 		
 		//  set in-car camera position to driver position
@@ -150,10 +153,10 @@ void CarModel::Create(int car)
 		for (std::vector<CameraAngle*>::iterator it=fCam->mCameraAngles.begin();
 			it!=fCam->mCameraAngles.end(); ++it)
 		{
-			if ( (*it)->mName == "Car driver" )
+			if ((*it)->mName == "Car driver")
 				(*it)->mOffset = driver_view_position;
 				
-			if ( (*it)->mName == "Car bonnet" )
+			if ((*it)->mName == "Car bonnet")
 				(*it)->mOffset = hood_view_position;
 		}
 	}

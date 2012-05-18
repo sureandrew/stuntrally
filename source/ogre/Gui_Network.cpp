@@ -412,6 +412,7 @@ void App::evBtnNetReady(WP)
 	{
 		if (mLobbyState == HOSTING)
 		{
+			if (mMasterClient) mMasterClient->signalStart();
 			boost::mutex::scoped_lock lock(netGuiMutex);
 			bStartGame = true;
 		}else
@@ -432,9 +433,10 @@ void App::chatSendMsg()
 	edNetChatMsg->setCaption("");
 }
 
-void App::evEdNetGameName(EditPtr)
+void App::evEdNetGameName(EditPtr ed)
 {
 	//  game name text changed
+	pSet->netGameName = ed->getCaption();
 	if (mLobbyState != HOSTING || !mMasterClient || !mClient)  return;
 	uploadGameInfo();
 }

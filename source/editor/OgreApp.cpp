@@ -54,10 +54,10 @@ App::App()  //  gui wigdets--
 	,mTerrainGroup(0), mTerrainPaging(0), mPageManager(0), mTerrainGlobals(0)
 	,bTerUpd(0), curBr(2), bGuiReinit(0), noBlendUpd(0), bGI(0), resList(0)
 	,ndPos(0), mpos(0), asp(4.f/3.f)
-	,ndCar(0),entCar(0),ndStBox(0),entStBox(0)
+	,ndCar(0),entCar(0), ndStBox(0),entStBox(0), ndFluidBox(0),entFluidBox(0), ndObjBox(0),entObjBox(0)
 	,grass(0), trees(0), sun(0), terMaxAng(0.f)
 	,eTrkEvent(TE_None), bNewHmap(0), bTrGrUpd(0)
-	,iFlCur(0), bRecreateFluids(0), world(0)
+	,iFlCur(0), bRecreateFluids(0), world(0), iObjCur(0), iObjNew(0)
 	
 	,materialFactory(0), bTerUpdBlend(1)
 {
@@ -67,24 +67,27 @@ App::App()  //  gui wigdets--
 	pathTrk[1] = PATHMANAGER::GetTrackPathUser() + "/";  pathTrkPrv[1] = pathTrk[1] + "_previews/";
 	strFSerrors = "";
 
-	mBrSize[0] = 16.f;		mBrSize[1] = 24.f;		mBrSize[2] = 16.f;
-	mBrIntens[0] = 20.f;	mBrIntens[1] = 20.f;	mBrIntens[2] = 20.f;
-	mBrPow[0] = 2.f;	mBrPow[1] = 2.f;	mBrPow[2] = 2.f;
-	mBrFq[0] = 1.f;		mBrFq[1] = 1.f;		mBrFq[2] = 1.f;
-	mBrOct[0] = 5;		mBrOct[1] = 5;		mBrOct[2] = 5;
-	terSetH = 10.f;
-	mBrShape[0] = BRS_Sinus;  mBrShape[1] = BRS_Sinus;	mBrShape[2] = BRS_Sinus;
+	mBrSize[0] = 16.f;	mBrSize[1] = 24.f;	mBrSize[2] = 16.f;	mBrSize[3] = 16.f;
+	mBrIntens[0] = 20.f;mBrIntens[1] = 20.f;mBrIntens[2] = 20.f;mBrIntens[3] = 20.f;
+	mBrPow[0] = 2.f;	mBrPow[1] = 2.f;	mBrPow[2] = 2.f;	mBrPow[3] = 2.f;
+	mBrFq[0] = 1.f;		mBrFq[1] = 1.f;		mBrFq[2] = 1.f;		mBrFq[3] = 1.f;
+	mBrOct[0] = 5;		mBrOct[1] = 5;		mBrOct[2] = 5;		mBrOct[3] = 5;
+	mBrShape[0] = BRS_Sinus;  mBrShape[1] = BRS_Sinus;	mBrShape[2] = BRS_Sinus;  mBrShape[3] = BRS_Sinus;
+	terSetH = 10.f;     mBrFilt = 2.f;  mBrFiltOld = 1.f;  pBrFmask = 0;
 	mBrushData = new float[BrushMaxSize*BrushMaxSize];
 	sBrushTest[0]=0;   updBrush();
 	iSnap = 0;  angSnap = crAngSnaps[iSnap];
 
-	for (int i=0; i<BR_TXT; ++i)  brTxt[i]=0;
-	for (int i=0; i<RD_TXT; ++i)  rdTxt[i]=0;
-	for (int i=0; i<RDS_TXT; ++i)  rdTxtSt[i]=0;
-	for (int i=0; i<FL_TXT; ++i)  flTxt[i]=0;
+	int i;
+	for (i=0; i<BR_TXT; ++i)  brTxt[i]=0;
+	for (i=0; i<RD_TXT; ++i)  rdTxt[i]=0;
+	for (i=0; i<RDS_TXT;++i)  rdTxtSt[i]=0;
+	for (i=0; i<ST_TXT; ++i)  stTxt[i]=0;
+	for (i=0; i<FL_TXT; ++i)  flTxt[i]=0;
+	for (i=0; i<OBJ_TXT;++i)  objTxt[i]=0;
 	
-	for (int i=0; i < StTrk; ++i)  stTrk[0][i] = 0;
-	for (int i=0; i < 4; ++i)  {  cmbRoadMtr[i]=0;  cmbPipeMtr[i]=0;  }
+	for (i=0; i < StTrk; ++i)  stTrk[0][i] = 0;
+	for (i=0; i < 4; ++i)  {  cmbRoadMtr[i]=0;  cmbPipeMtr[i]=0;  }
 }
 
 void App::postInit()
@@ -110,6 +113,8 @@ const Ogre::String App::csBrShape[BRS_ALL] = { "Triangle", "Sinus", "Noise" };  
 
 App::~App()
 {
+	delete[] pBrFmask;  pBrFmask = 0;
+
 	delete materialFactory;
 	delete[] mBrushData;
 	delete road;

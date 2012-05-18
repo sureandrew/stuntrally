@@ -61,7 +61,7 @@ ReplayFrame::ReplayFrame() :
 	,braking(false)
 	,fHitTime(0.f), fParIntens(0.f),fParVel(0.f)
 	//Vector3 vHitPos,vHitNorm;
-	,whMudSpin(0.f)
+	,whMudSpin(0.f), fHitForce(0.f)
 {
 	pos[0]=0.f;  pos[1]=0.f;  pos[2]=0.f;
 	whSteerAng[0]=whSteerAng[1]=0.f;
@@ -115,12 +115,18 @@ bool Replay::LoadFile(std::string file, bool onlyHdr)
     #ifdef LOG_RPL
 		if (!onlyHdr)
 			LogO(">- Load replay --  file: "+file+"  players:"+toStr(header.numPlayers));
-		/**if (!onlyHdr)  
+		if (!onlyHdr)  
 		for (int p=0; p < header.numPlayers; ++p)
 		{
-			if (p==0)	LogO(Ogre::String(">- Load replay  nick:")+header.nicks[p]+"  car:"+header.car);
-			else		LogO(Ogre::String(">- Load replay  nick:")+header.nicks[p]+"  car:"+Ogre::String(&header.cars[0][p]));
-		}/**/
+			if (p==0)  {
+				//LogO(Ogre::String(">- Load replay  nick:")+header.nicks[p]+"  car:"+header.car);
+			}else{
+				// versions below 8 had wrong nicks and cars in header for more than 1 player
+				if (strlen(header.cars[p]) < 2)
+					strcpy(header.cars[p], "3S");
+				//LogO(Ogre::String(">- Load replay  nick:")+header.nicks[p]+"  car:"+Ogre::String(&header.cars[0][p]));
+			}
+		}
 	#endif
 	
 	//  clear

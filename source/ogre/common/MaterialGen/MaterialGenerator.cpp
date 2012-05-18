@@ -1,6 +1,16 @@
 #include "pch.h"
 #include "../Defines.h"
 
+#include <OgreMaterialManager.h>
+#include <OgreTechnique.h>
+#include <OgrePass.h>
+#include <OgreTextureUnitState.h>
+#include <OgreHighLevelGpuProgramManager.h>
+#include <OgreHighLevelGpuProgram.h>
+#include <OgreGpuProgramParams.h>
+#include <OgreRoot.h>
+using namespace Ogre;
+
 #include "MaterialGenerator.h"
 #include "MaterialDefinition.h"
 #include "MaterialFactory.h"
@@ -13,15 +23,6 @@
 #endif
 
 
-#include <OgreMaterialManager.h>
-#include <OgreTechnique.h>
-#include <OgrePass.h>
-#include <OgreTextureUnitState.h>
-#include <OgreHighLevelGpuProgramManager.h>
-#include <OgreHighLevelGpuProgram.h>
-#include <OgreGpuProgramParams.h>
-#include <OgreRoot.h>
-using namespace Ogre;
 
 bool MaterialGenerator::bUseMRT=false;	
 
@@ -50,8 +51,7 @@ void MaterialGenerator::generate()
 	
 	pass->setCullingMode(chooseCullingMode());
 	
-	if (!mDef->mProps->fog)
-		pass->setFog(true); // actually this disables fog
+	pass->setFog(true); // turn off fixed function fog, we use shaders
 		
 	if (!mDef->mProps->lighting)
 		pass->setLightingEnabled(false);

@@ -16,6 +16,7 @@
 
 #include "common/MessageBox/MessageBox.h"
 #include "common/MessageBox/MessageBoxStyle.h"
+#include "common/GraphView.h"
 
 #include "../network/networkcallbacks.hpp"
 #include <boost/thread.hpp>
@@ -29,7 +30,9 @@ namespace Forests {  class PagedGeometry;  }
 namespace BtOgre  {  class DebugDrawer;  }
 namespace MyGUI  {  class MultiList2;  }
 namespace OISB   {  class AnalogAxisAction;  }
+namespace MyGUI  {  class Slider;  }
 class MaterialFactory;
+class GraphView;
 const int CarPosCnt = 8;  // size of poses queue
 
 
@@ -49,10 +52,12 @@ public:
 	
 	void setTranslations();
 	
-	// This list holds new positions info for every CarModel
+	std::vector<GraphView*> graphs;  /// graphs
+	void CreateGraphs(),DestroyGraphs(),UpdateGraphs(),GraphsNewVals();
+	int iEdTire, iCurLat,iCurLong,iCurAlign, iUpdTireGr;  ///* tire edit */
 	
-	/*typedef std::vector<PosInfo> CarPosQue;  // [carPosCnt]
-	std::vector<CarPosQue>*/ PosInfo carPoses[CarPosCnt][8];  // [carsNum8]
+	// This list holds new positions info for every CarModel
+	PosInfo carPoses[CarPosCnt][8];  // [carsNum8]
 	/*std::vector<int>*/ int iCurPoses[8];  // current index for carPoses queue
 	std::map<int,int> carsCamNum;  // picked camera number for cars
 	
@@ -113,9 +118,11 @@ protected:
 
 	///  HUD, 2D  ------------
 	float asp, scX,scY, minX,maxX, minY,maxY;  // minimap visible range
+	//  gear, vel
+	MyGUI::TextBox *txGear[4],*txVel[4],*txBFuel[4];
 	//  gauges
 	Ogre::SceneNode *ndRpm[4], *ndVel[4], *ndRpmBk[4], *ndVelBk[4],*ndVelBm[4];
-	Ogre::ManualObject* moRpm[4], *moVel[4];
+	Ogre::ManualObject* moRpm[4], *moVel[4], *moRpmBk[4], *moVelBk[4],*moVelBm[4];
 	//  miniap
 	Ogre::ManualObject* moMap[4];
 	Ogre::SceneNode *ndMap[4], *ndLine;
@@ -125,29 +132,29 @@ protected:
 	Ogre::ManualObject* Create2D(const Ogre::String& mat, Ogre::SceneManager* sceneMgr,
 		Ogre::Real size, bool dyn = false, bool clr = false);
 
-	Ogre::OverlayElement* hudGear,*hudVel,*hudBoost,*hudCountdown,*hudNetMsg, *ovL[5],*ovR[5],*ovS[5],*ovU[5],
+	Ogre::OverlayElement *hudCountdown,*hudNetMsg, *ovL[5],*ovR[5],*ovS[5],*ovU[5],
 		*hudAbs,*hudTcs, *hudTimes, *hudWarnChk,*hudWonPlace, *hudOpp[5][3],*hudOppB;
-	Ogre::Overlay* ovGear,*ovVel,*ovBoost,*ovCountdown,*ovNetMsg,
+	Ogre::Overlay *ovCountdown,*ovNetMsg,
 		*ovAbsTcs, *ovTimes, *ovCarDbg,*ovCarDbgTxt, *ovCam, *ovWarnWin, *ovOpp;
 
 	Ogre::String GetTimeString(float time) const;
-	void CreateHUD(), ShowHUD(bool hideAll=false), UpdMiniTer();
+	void CreateHUD(bool destroy), ShowHUD(bool hideAll=false), UpdMiniTer();
 	Ogre::Vector3 projectPoint(const Ogre::Camera* cam, const Ogre::Vector3& pos);  // 2d xy, z - out info
 	MyGUI::TextBox* CreateNickText(int carId, Ogre::String text);
 
 
 	///  create  . . . . . . . . . . . . . . . . . . . . . . . . 
 	Ogre::String resCar, resTrk, resDrv;
-	void CreateCar(), CreateTrack(), CreateRacingLine(), CreateMinimap(), CreateRoadBezier();
-	void CreateTerrain(bool bNewHmap=false, bool bTer=true), CreateBltTerrain();
-	void GetTerAngles(int xb,int yb, int xe,int ye);
-	void CreateTrees(), CreateRoad(), CreateProps(), CreateFluids(), CreateBltFluids();
+	void CreateCar(), /*vdrift:*/CreateVdrTrack(), CreateRacingLine(), CreateMinimap(), CreateRoadBezier();
+	void CreateTerrain(bool bNewHmap=false, bool bTer=true), CreateBltTerrain(), GetTerAngles(int xb,int yb, int xe,int ye);
+	void CreateTrees(), CreateRoad(), CreateObjects(),DestroyObjects();
+	void CreateFluids(), CreateBltFluids(), UpdateWaterRTT(Ogre::Camera* cam);
 	void CreateSkyDome(Ogre::String sMater, Ogre::Vector3 scale);
 	void NewGame();  void NewGameDoLoad();  bool IsTerTrack();  bool newGameRpl;
 	
 	// Loading
-	void LoadCleanUp(), LoadGame(), LoadScene(), LoadCar(), LoadTerrain(), LoadTrack(), LoadMisc();
-	enum ELoadState { LS_CLEANUP=0, LS_GAME, LS_SCENE, LS_CAR, LS_TER, LS_TRACK, LS_MISC, LS_ALL };
+	void LoadCleanUp(), LoadGame(), LoadScene(), LoadCar(), LoadTerrain(), LoadRoad(), LoadObjects(), LoadTrees(), LoadMisc();
+	enum ELoadState { LS_CLEANUP=0, LS_GAME, LS_SCENE, LS_CAR, LS_TER, LS_ROAD, LS_OBJS, LS_TREES, LS_MISC, LS_ALL };
 	
 	// id, display name, initialised in App()
 	// e.g.: 0, Cleaning up or 3, Loading scene
@@ -198,7 +205,7 @@ protected:
 	typedef std::list <std::string> strlist;
 	//  slider event and its text field for value
 	#define SLV(name)  void sl##name(SL);  MyGUI::StaticTextPtr val##name;
-	#define SL  MyGUI::ScrollBar* wp, size_t val						//  slider event args
+	#define SL  MyGUI::Slider* wp, float val
 	#define CMB MyGUI::ComboBox* wp, size_t val // combobox event args
 
 	///  Gui common   --------------------------
@@ -285,7 +292,7 @@ protected:
 	virtual bool axisMoved( const OIS::JoyStickEvent &e, int axis );
     virtual bool buttonPressed( const OIS::JoyStickEvent &e, int button );
     virtual bool buttonReleased( const OIS::JoyStickEvent &e, int button );
-	MyGUI::StaticTextPtr txtJAxis, txtJBtn, txtInpDetail;
+	MyGUI::StaticTextPtr txtJAxis, txtJBtn, txtInpDetail;  MyGUI::WidgetPtr panInputDetail;
 	int lastAxis, axisCnt;  std::string joyName;  class OISB::AnalogAxisAction* actDetail;
 	MyGUI::EditPtr edInputMin, edInputMax, edInputMul, edInputReturn, edInputIncrease;  void editInput(MyGUI::EditPtr);
 	MyGUI::ComboBox* cmbInpDetSet;  void comboInputPreset(CMB), comboInputKeyAllPreset(CMB);
@@ -294,37 +301,42 @@ protected:
 	//  sliders  -----------------------------------------
 	SLV(Particles);  SLV(Trails);
 	SLV(ReflSkip);  SLV(ReflSize);  SLV(ReflFaces);  SLV(ReflDist);  SLV(ReflMode); // refl
-	SLV(SizeGaug);  SLV(SizeMinimap);  SLV(SizeArrow);  SLV(ZoomMinimap);  SLV(CountdownTime);  // view
-	SLV(VolMaster);  SLV(VolEngine);  SLV(VolTires);  SLV(VolEnv);
+	SLV(SizeGaug);  SLV(TypeGaug);  SLV(SizeMinimap);  SLV(SizeArrow);  SLV(ZoomMinimap);
+	SLV(CountdownTime);  SLV(GraphsType);  MyGUI::Slider* slGraphT; // view
+	SLV(VolMaster);  SLV(VolEngine);  SLV(VolTires);  SLV(VolSusp);  SLV(VolEnv);  // sounds
+	SLV(VolFlSplash);  SLV(VolFlCont);  SLV(VolCarCrash);  SLV(VolCarScrap);
+	
 	SLV(CarClrH);  SLV(CarClrS);  SLV(CarClrV);  // car clr
 	SLV(BloomInt);  SLV(BloomOrig);  SLV(BlurIntens);  // video
 	SLV(DepthOfFieldFocus);  SLV(DepthOfFieldFar);  // dof
-	SLV(NumLaps);  // setup
+	SLV(NumLaps);  SLV(RplNumViewports);  // setup
 	
 	//  checks
-	void chkFps(WP), chkGauges(WP),	chkArrow(WP), chkDigits(WP),
+	void chkGauges(WP),	chkArrow(WP), chkDigits(WP),
 		chkMinimap(WP), chkMiniZoom(WP), chkMiniRot(WP), chkMiniTer(WP),  // view
-		chkCamInfo(WP), chkTimes(WP), chkOpponents(WP), chkOpponentsSort(WP),
-		chkCarDbgBars(WP), chkCarDbgTxt(WP), chkBltDebug(WP), chkBltProfilerTxt(WP), chkProfilerTxt(WP),
+		chkFps(WP), chkWireframe(WP), 
+		chkCamInfo(WP), chkTimes(WP), chkOpponents(WP), chkOpponentsSort(WP), chkCamTilt(WP),
+		chkCarDbgBars(WP), chkCarDbgTxt(WP), chkGraphs(WP),
+		chkBltDebug(WP), chkBltProfilerTxt(WP), chkProfilerTxt(WP),
 		chkReverse(WP), chkParticles(WP), chkTrails(WP),
 		chkAbs(WP), chkTcs(WP), chkGear(WP), chkRear(WP), chkRearInv(WP),  // car
 		chkMouseCapture(WP), chkOgreDialog(WP), chkAutoStart(WP), chkEscQuits(WP),
 		chkBltLines(WP), chkLoadPics(WP), chkMultiThread(WP),  // startup
-		chkVidEffects(WP), chkVidBloom(WP), chkVidHDR(WP), chkVidBlur(WP), UpdBloomVals(), chkVidSSAO(WP), // video
-		chkVidSoftParticles(WP),chkVidGodRays(WP), chkWaterReflect(WP), chkWaterRefract(WP), chkVidDepthOfField(WP),
-		chkVidFilmGrain(WP),
-		chkVegetCollis(WP), chkCarCollis(WP);  //car
+		chkVidEffects(WP), chkVidBloom(WP), chkVidHDR(WP), chkVidBlur(WP), UpdBloomVals(), chkVidSSAO(WP), // effects
+		chkVidSoftParticles(WP), chkVidGodRays(WP), chkWaterReflect(WP), chkWaterRefract(WP),
+		chkVidDepthOfField(WP), chkVidFilmGrain(WP),
+		chkVegetCollis(WP), chkCarCollis(WP), chkRoadWCollis(WP);  //game
 	void chkUseImposters(WP wp);
 
-	void imgBtnCarClr(WP), btnCarClrRandom(WP);
+	void imgBtnCarClr(WP), btnCarClrRandom(WP), toggleWireframe();
 	MyGUI::ButtonPtr bRkmh, bRmph;  void radKmh(WP), radMph(WP);
-	MyGUI::ButtonPtr chDbgT,chDbgB, chBlt,chBltTxt, chFps, chProfTxt,
+	MyGUI::ButtonPtr chFps,chWire, chBlt,chBltTxt, chProfTxt, chDbgT,chDbgB, chGraphs,
 		chTimes,chMinimp,chOpponents;
 
 	///  replay  -----------------------------
 	MyGUI::StaticTextPtr valRplPerc, valRplCur, valRplLen,
 		valRplName,valRplInfo,valRplName2,valRplInfo2;
-	MyGUI::ScrollBar* slRplPos;  void slRplPosEv(SL);
+	MyGUI::Slider* slRplPos;  void slRplPosEv(SL);
 	MyGUI::EditPtr edRplName, edRplDesc;
 	void btnRplLoad(WP), btnRplSave(WP), btnRplDelete(WP), btnRplRename(WP),  // btn
 		chkRplAutoRec(WP),chkRplChkGhost(WP),chkRplChkBestOnly(WP),chkRplChkAlpha(WP),chkRplChkPar(WP),  // replay
@@ -343,7 +355,7 @@ protected:
 
 public:
 	bool bRplPlay,bRplPause, bRplRec, bRplWnd;  //  game
-	int carIdWin, iCurCar;
+	int carIdWin, iCurCar, iRplCarOfs;
 protected:
 	MyGUI::ButtonPtr btRplPl;  void UpdRplPlayBtn();
 	///---------------------------------------
@@ -352,7 +364,7 @@ protected:
 	void btnNewGame(WP),btnNewGameStart(WP);
 	MyGUI::ListPtr carList, rplList;  void updReplaysList();
 	void listRplChng(MyGUI::List* li, size_t pos);
-	void listCarChng(MyGUI::List* li, size_t pos),  btnChgCar(WP), btnChgTrack(WP);
+	void listCarChng(MyGUI::List* li, size_t pos),  btnChgCar(WP), changeTrack();
 	int LNext(MyGUI::MultiList2* lp, int rel), LNext(MyGUI::ListPtr lp, int rel),
 		LNext(MyGUI::MultiList* lp, int rel);  // util next in list
 	void LNext(int rel);  void tabPlayer(MyGUI::TabPtr wp, size_t id);

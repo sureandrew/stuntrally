@@ -182,7 +182,7 @@ void App::SaveGrassDens()
 	delete[] rd;  delete[] gd;  delete[] mask;
 
 	//  road  ----------------
-	int u = pSet->allow_save ? 0 : 1;
+	int u = pSet->allow_save ? pSet->gui.track_user : 1;
 	rt[0].rndTex->writeContentsToFile(pathTrkPrv[u] + pSet->gui.track + "_mini.png");
 	//  terrain
 	rt[2].rndTex->writeContentsToFile(pathTrkPrv[u] + pSet->gui.track + "_ter.jpg");
@@ -325,6 +325,8 @@ void App::SaveWaterDepth()
 	TexturePtr tex = TextureManager::getSingleton().getByName("waterDepth.png");
 	if (!tex.isNull())
 		tex->reload();
+	else  // 1st fluid after start, refresh matdef ?..
+		TextureManager::getSingleton().load("waterDepth.png",ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
 	} catch(...) {  }
 
 

@@ -34,7 +34,7 @@ public:
 
 
 namespace Ogre {  class TerrainGroup;  class Camera;  class OverlayElement;  class SceneNode;  }
-class PosInfo;
+class PosInfo;  class SETTINGS;
 
 //#define CAM_BLT
 
@@ -42,16 +42,22 @@ class PosInfo;
 class FollowCamera
 {
 public:
-	FollowCamera(Ogre::Camera* cam);
+	FollowCamera(Ogre::Camera* cam, SETTINGS* pSet1);
 	~FollowCamera();
+
+	SETTINGS* pSet;
 
 	//  ogre
 	Ogre::Camera* mCamera;
 	Ogre::TerrainGroup* mTerrain;
 
-	const Ogre::SceneNode* mGoalNode;
+	///  state vars
 	Ogre::Vector3 mLook, mPosNodeOld;  Ogre::Real mVel;
 	Ogre::Quaternion qq;  // for ext cam
+	Ogre::Radian mAPitch,mAYaw, mATilt;  // for arena cam smoothing
+
+	Ogre::Vector3 camPosFinal;  //, camLookFinal;  Ogre::Quaternion camRotFinal;
+	bool manualOrient;
 
     #ifdef CAM_BLT  // bullet
 	class COLLISION_WORLD* mWorld;
@@ -62,11 +68,10 @@ public:
 	class btRigidBody* body;
 	#endif
 	
+	///  update, simulates camera
+	void update(Ogre::Real time, const PosInfo& posInPrev, PosInfo* posOut, class COLLISION_WORLD* world);
+	void updInfo(Ogre::Real time = 0);  char ss[512];
 
-	//  update, simulates camera
-	Ogre::Vector3 camPosFinal;  //, camLookFinal;  Ogre::Quaternion camRotFinal;
-	void update(Ogre::Real time, const PosInfo& posInPrev, PosInfo* posOut), updInfo(Ogre::Real time = 0);
-	bool manualOrient;
 	//  apply, sets mCamera's pos and rot
 	void Apply(const PosInfo& posIn);
 

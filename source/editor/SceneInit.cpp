@@ -75,7 +75,7 @@ void App::UpdTrees()
 		CreateTrees();
 }
 
-void App::NewCommon()
+void App::NewCommon(bool onlyTerVeget)
 {
 	//  destroy all
 	if (ndSky)
@@ -85,7 +85,11 @@ void App::NewCommon()
 	if (trees) {  delete trees->getPageLoader();  delete trees;  trees=0;   }
 
 	//mSceneMgr->destroyAllStaticGeometry();
-	DestroyFluids();
+	if (!onlyTerVeget)
+	{
+		DestroyObjects();
+		DestroyFluids();
+	}
 
 	//  terrain
 	terrain = 0;
@@ -106,7 +110,7 @@ void App::LoadTrack()
 void App::LoadTrackEv()
 {
 	QTimer ti;  ti.update();  /// time
-	NewCommon();
+	NewCommon(false);  // full destroy
 
 	if (road)
 	{	road->Destroy();  delete road;  road = 0;  }
@@ -116,15 +120,7 @@ void App::LoadTrackEv()
 	sc.LoadXml(TrkDir()+"scene.xml");
 	
 	//  water RTT
-	mWaterRTT.setViewerCamera(mCamera);
-	mWaterRTT.setRTTSize(ciShadowSizesA[pSet->water_rttsize]);
-	mWaterRTT.setReflect(MaterialFactory::getSingleton().getReflect());
-	mWaterRTT.setRefract(MaterialFactory::getSingleton().getRefract());
-	mWaterRTT.mSceneMgr = mSceneMgr;
-	if (!sc.fluids.empty())
-		mWaterRTT.setPlane(Plane(Vector3::UNIT_Y, sc.fluids.front().pos.y));
-	mWaterRTT.recreate();
-	mWaterRTT.setActive(!sc.fluids.empty());
+	UpdateWaterRTT(mCamera);
 	
 	/// generate materials
 	materialFactory->generate();
@@ -134,10 +130,9 @@ void App::LoadTrackEv()
 	UpdWndTitle();
 
 	CreateFluids();
+
 	bNewHmap = false;/**/
 	CreateTerrain();
-	if (pSet->bTrees)
-		CreateTrees();
 
 	//  road ~
 	road = new SplineRoad();
@@ -145,6 +140,11 @@ void App::LoadTrackEv()
 	road->Setup("sphere.mesh", 1.4f*pSet->road_sphr, terrain, mSceneMgr, mCamera);
 	road->LoadFile(TrkDir()+"road.xml");
 	UpdPSSMMaterials();
+	
+	CreateObjects();
+
+	if (pSet->bTrees)
+		CreateTrees();  // trees after objects so they aren't inside them
 
 
 	//  updates after load
@@ -180,17 +180,20 @@ void App::UpdateTrack()
 }
 void App::UpdateTrackEv()
 {
-	NewCommon();
+	NewCommon(true);  // destroy only terrain and veget
 	
-	CreateFluids();
+	//CreateFluids();
 	CreateTerrain(bNewHmap,true);/**/
-	if (pSet->bTrees)
-		CreateTrees();
 
 	//  road ~
 	road->mTerrain = terrain;
 	road->RebuildRoad(true);
 	UpdPSSMMaterials();
+
+	//CreateObjects();
+
+	if (pSet->bTrees)
+		CreateTrees();
 
 	Rnd2TexSetup();
 
@@ -317,8 +320,13 @@ void App::TerCircleUpd()
 	static ED_MODE edOld = ED_ALL;
 	if (edOld != edMode)
 	{	edOld = edMode;
-		moTerC->setMaterialName(0, edMode == ED_Deform ? "circle_deform" :
-									edMode == ED_Height ? "circle_height" : "circle_smooth");
+		switch(edMode)
+		{
+		case ED_Deform: moTerC->setMaterialName(0, "circle_deform");  break;
+		case ED_Filter: moTerC->setMaterialName(0, "circle_filter");  break;
+		case ED_Smooth: moTerC->setMaterialName(0, "circle_smooth");  break;
+		case ED_Height: moTerC->setMaterialName(0, "circle_height");  break;
+		}
 	}
 	moTerC->beginUpdate(0);
 	for (int d = 0; d < divs+2; ++d)

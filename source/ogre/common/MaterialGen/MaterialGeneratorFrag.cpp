@@ -1,6 +1,16 @@
 #include "pch.h"
 #include "../Defines.h"
 
+#include <OgreMaterialManager.h>
+#include <OgreTechnique.h>
+#include <OgrePass.h>
+#include <OgreTextureUnitState.h>
+#include <OgreHighLevelGpuProgramManager.h>
+#include <OgreHighLevelGpuProgram.h>
+#include <OgreGpuProgramParams.h>
+#include <OgreRoot.h>
+using namespace Ogre;
+
 #include "MaterialGenerator.h"
 #include "MaterialDefinition.h"
 #include "MaterialFactory.h"
@@ -11,17 +21,6 @@
 #else
 	#include "../../../editor/OgreApp.h"
 #endif
-
-
-#include <OgreMaterialManager.h>
-#include <OgreTechnique.h>
-#include <OgrePass.h>
-#include <OgreTextureUnitState.h>
-#include <OgreHighLevelGpuProgramManager.h>
-#include <OgreHighLevelGpuProgram.h>
-#include <OgreGpuProgramParams.h>
-#include <OgreRoot.h>
-using namespace Ogre;
 
 
 //  Fragment program
@@ -238,7 +237,7 @@ void MaterialGenerator::fpCalcShadowSource(Ogre::StringUtil::StrStreamType& outS
 		"	float shadowingRT;";
 		
 		outStream << "\n		";
-		for (uint i = 0; i < mParent->getNumShadowTex(); ++i)
+		for (int i = 0; i < mParent->getNumShadowTex(); ++i)
 			outStream << "float4 invShadowMapSize" << i << "; ";
 			
 		outStream <<
@@ -548,7 +547,9 @@ void MaterialGenerator::generateFragmentProgramSource(Ogre::StringUtil::StrStrea
 				"	float reflectionFactor = tex2D(reflectivityMap, texCoord.xy).r * reflAmount; \n";
 		}
 		outStream << 
+		
 		"	float3 r = reflect( eyeVector, normal ); \n" // calculate reflection vector
+		"	r.z = -r.z; \n"
 		"	float4 envColor = texCUBE(envMap, r); \n"; // fetch cube map
 
 		if (fpNeedLighting()) outStream <<
@@ -681,8 +682,10 @@ void MaterialGenerator::fragmentProgramParams(HighLevelGpuProgramPtr program)
 	
 	params->setNamedAutoConstant("fogColor", GpuProgramParameters::ACT_FOG_COLOUR);
 	
+	#ifndef _DEBUG  // issue in debug
 	if (vpNeedWvMat())
 		params->setNamedAutoConstant("wvMat", GpuProgramParameters::ACT_WORLDVIEW_MATRIX);
+	#endif
 		
 	if (fpNeedNormal())
 		params->setNamedAutoConstant("wITMat", GpuProgramParameters::ACT_INVERSE_TRANSPOSE_WORLD_MATRIX);
@@ -703,9 +706,9 @@ void MaterialGenerator::fragmentProgramParams(HighLevelGpuProgramPtr program)
 
 void MaterialGenerator::individualFragmentProgramParams(Ogre::GpuProgramParametersSharedPtr params)
 {
-	#ifndef _DEBUG
+	//#ifndef _DEBUG
 	params->setIgnoreMissingParams(true);
-	#endif
+	//#endif
 	
 	if (needEnvMap() && !needFresnel())
 	{

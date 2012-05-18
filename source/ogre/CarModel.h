@@ -46,7 +46,7 @@ struct PosInfo
 	Ogre::Vector3 vHitPos,vHitNorm;  // world hit data
 	
 	//  camera view
-	Ogre::Vector3 camPos, camLook;  Ogre::Quaternion camRot;
+	Ogre::Vector3 camPos, camLook;  Ogre::Quaternion camRot;  bool camUseRot;
 
 	PosInfo() : bNew(false),  // not inited
 		pos(0,-200,0), percent(0.f), braking(false)
@@ -85,7 +85,7 @@ public:
 	void setMtrName(const Ogre::String& entName, const Ogre::String& mtrName);
 	
 	//  Call this every vdrift substep with new position info
-	void Update(PosInfo& newPosInfo, float time);
+	void Update(PosInfo& posInfo, PosInfo& posInfoCam, float time);
 	void UpdateKeys();  // for camera X,C, last chk F12
 	
 	//  Car color, After these values are changed, ChangeClr() should be called
@@ -110,6 +110,7 @@ public:
 	Ogre::SceneNode* pMainNode;
 	
 	void setVisible(bool visible);  // hide/show
+	bool mbVisible;  float hideTime;
 		
 	//  Handles our cube map.
 	CarReflection* pReflect;
@@ -154,6 +155,7 @@ private:
 	std::string sMtr[NumMaterials];
 			
 	//  Particle systems, trail
+	//enum {  PAR_Smoke=0, PAR_Mud, PAR_Dust, PAR_Water, PAR_MudHard, PAR_MudSoft, PAR_Boost, PAR_Sparks, PAR_ALL };
 	Ogre::ParticleSystem* ps[4],*pm[4],*pd[4];  // smoke, mud, dust
 	Ogre::ParticleSystem* pflW[4],*pflM[4],*pflMs[4];  // water, mud, mud soft
 	Ogre::ParticleSystem* pb[2], *ph;  // boost, world hit

@@ -27,7 +27,26 @@ using std::endl;
 using std::pair;
 
 
-///start the game with the given arguments
+///  ctor
+GAME::GAME(std::ostream & info_out, std::ostream & err_out, SETTINGS* pSettings) :
+	settings(pSettings), info_output(info_out), error_output(err_out),
+	frame(0), displayframe(0), clocktime(0), target_time(0),
+	//framerate(0.01f),  ///~  0.004+  o:0.01
+	fps_track(10,0), fps_position(0), fps_min(0), fps_max(0),
+	multithreaded(false), benchmode(false), dumpfps(false),
+	pause(false), debugmode(false), profilingmode(false),
+	particle_timer(0), race_laps(0),
+	track(info_out, err_out), /*tracknode(NULL),*/
+	framerate(1.0 / pSettings->game_fq)
+{
+	carcontrols_local.first = NULL;
+	//  sim iv from settings
+	collision.fixedTimestep = 1.0 / pSettings->blt_fq;
+	collision.maxSubsteps = pSettings->blt_iter;
+}
+
+
+//  start the game with the given arguments
 void GAME::Start(std::list <string> & args)
 {
 	if (!ParseArguments(args))
@@ -51,28 +70,19 @@ void GAME::Start(std::list <string> & args)
 	//initialize GUI
 	std::map<string, string> optionmap;
 	LoadSaveOptions(LOAD, optionmap);
-	//if (settings->mousegrab)  eventsystem.SetMouseCursorVisibility(true);
 
 	//initialize force feedback
 	#ifdef ENABLE_FORCE_FEEDBACK
 	forcefeedback.reset(new FORCEFEEDBACK(settings->ff_device, error_output, info_output));
 		ff_update_time = 0;
 	#endif
-
-	/*if (benchmode)
-	{
-		if(!NewGame(true))
-		{
-			error_output << "Error loading benchmark" << endl;
-		}
-	}*/
 }
 
 bool GAME::InitializeSound()
 {
 	QTimer ti;  ti.update();  /// time
 	
-	if (sound.Init(2048, info_output, error_output))
+	if (sound.Init(/*2048*/1024/*512*/, info_output, error_output))
 	{
 		generic_sounds.SetLibraryPath(PATHMANAGER::GetGenericSoundPath());
 		
@@ -82,16 +92,14 @@ bool GAME::InitializeSound()
 		if (!generic_sounds.Load("bump_front", sound.GetDeviceInfo(), error_output))  return false;
 		if (!generic_sounds.Load("bump_rear", sound.GetDeviceInfo(), error_output))  return false;
 		if (!generic_sounds.Load("wind", sound.GetDeviceInfo(), error_output))  return false;
-		for (int i = 0; i < Ncrashsounds; ++i)
-		{
-			int n = i+1;
-			char name[3] = {'0'+ n/10, '0'+ n%10, 0};
-			if (!generic_sounds.Load(name, sound.GetDeviceInfo(), error_output))  return false;
-		}
+		for (int i = 1; i <= Ncrashsounds; ++i)
+			if (!generic_sounds.Load(toStr(i/10)+toStr(i%10), sound.GetDeviceInfo(), error_output))  return false;
+		if (!generic_sounds.Load("scrap", sound.GetDeviceInfo(), error_output))  return false;
+		if (!generic_sounds.Load("screech", sound.GetDeviceInfo(), error_output))  return false;
+
 		for (int i = 0; i < Nwatersounds; ++i)
-		{
 			if (!generic_sounds.Load("water"+toStr(i+1), sound.GetDeviceInfo(), error_output))  return false;
-		}
+
 		if (!generic_sounds.Load("mud1", sound.GetDeviceInfo(), error_output))  return false;
 		if (!generic_sounds.Load("mud_cont", sound.GetDeviceInfo(), error_output))  return false;
 		if (!generic_sounds.Load("water_cont", sound.GetDeviceInfo(), error_output))  return false;
@@ -114,135 +122,8 @@ bool GAME::InitializeSound()
 	return true;
 }
 
-///break up the input into a vector of strings using the token characters given
-std::vector <string> Tokenize(const string & input, const string & tokens)
-{
-	std::vector <string> out;
-	
-	unsigned int pos = 0;
-	unsigned int lastpos = 0;
-	
-	while (pos != (unsigned int) string::npos)
-	{
-		pos = input.find_first_of(tokens, pos);
-		string thisstr = input.substr(lastpos,pos-lastpos);
-		if (!thisstr.empty())
-			out.push_back(thisstr);
-		pos = input.find_first_not_of(tokens, pos);
-		lastpos = pos;
-	}
-	
-	return out;
-}
 
-bool GAME::ParseArguments(std::list <string> & args)
-{
-	bool continue_game(true);
-	
-	std::map <string, string> arghelp;
-	std::map <string, string> argmap;
-
-	//generate an argument map
-	for (std::list <string>::iterator i = args.begin(); i != args.end(); ++i)
-	{
-		if ((*i)[0] == '-')
-		{
-			argmap[*i] = "";
-		}
-
-		std::list <string>::iterator n = i;
-		n++;
-		if (n != args.end())
-		{
-			if ((*n)[0] != '-')
-				argmap[*i] = *n;
-		}
-	}
-
-	//check for arguments
-
-	if (argmap.find("-test") != argmap.end())
-	{
-		Test();
-		continue_game = false;
-	}
-	arghelp["-test"] = "Run unit tests.";
-	
-	if (argmap.find("-debug") != argmap.end())
-	{
-		debugmode = true;
-	}
-	///+
-	//debugmode = true;
-	arghelp["-debug"] = "Display car debugging information.";
-
-	if (!argmap["-cartest"].empty())
-	{
-		PATHMANAGER::Init(info_output, error_output);
-		PERFORMANCE_TESTING perftest;
-		perftest.Test(PATHMANAGER::GetCarPath(), argmap["-cartest"], info_output, error_output);
-		continue_game = false;
-	}
-	arghelp["-cartest CAR"] = "Run car performance testing on given CAR.";
-	
-	if (!argmap["-profile"].empty())
-	{
-		PATHMANAGER::SetProfile(argmap["-profile"]);
-	}
-	arghelp["-profile PROFILENAME"] = "Store settings, controls, and records under a separate profile.";
-	
-	///+
-	//if (argmap.find("-profiling") != argmap.end() || argmap.find("-benchmark") != argmap.end())
-	//if (settings->bltLines/*bltProfilerTxt*/)
-	{
-		PROFILER.init(20);
-		profilingmode = true;
-	}
-	arghelp["-profiling"] = "Display game performance data.";
-	
-	if (argmap.find("-dumpfps") != argmap.end())
-	{
-		info_output << "Dumping the frame-rate to log." << endl;
-		dumpfps = true;
-	}
-	arghelp["-dumpfps"] = "Continually dump the framerate to the log.";
-	
-
-	if (argmap.find("-nosound") != argmap.end())
-		sound.DisableAllSound();
-	arghelp["-nosound"] = "Disable all sound.";
-
-	if (argmap.find("-benchmark") != argmap.end())
-	{
-		info_output << "Entering benchmark mode." << endl;
-		benchmode = true;
-	}
-	arghelp["-benchmark"] = "Run in benchmark mode.";
-	
-	
-	arghelp["-help"] = "Display command-line help.";
-	if (argmap.find("-help") != argmap.end() || argmap.find("-h") != argmap.end() || argmap.find("--help") != argmap.end() || argmap.find("-?") != argmap.end())
-	{
-		string helpstr;
-		unsigned int longest = 0;
-		for (std::map <string,string>::iterator i = arghelp.begin(); i != arghelp.end(); ++i)
-			if (i->first.size() > longest)
-				longest = i->first.size();
-		for (std::map <string,string>::iterator i = arghelp.begin(); i != arghelp.end(); ++i)
-		{
-			helpstr.append(i->first);
-			for (unsigned int n = 0; n < longest+3-i->first.size(); n++)
-				helpstr.push_back(' ');
-			helpstr.append(i->second + "\n");
-		}
-		info_output << "Command-line help:\n\n" << helpstr << endl;
-		continue_game = false;
-	}
-
-	return continue_game;
-}
-
-///do any necessary cleanup
+//  do any necessary cleanup
 void GAME::End()
 {
 	if (benchmode)
@@ -278,86 +159,57 @@ void GAME::Test()
 }
 
 
-///the main game loop
-bool GAME::OneLoop()
+///  the main game loop
+//----------------------------------------------------------------------------------------------------------------------------
+bool GAME::OneLoop(double dt)
 {
 	PROFILER.beginBlock(" oneLoop");
 
-	//if (profilingmode && frame % 10 == 0)  //par
-	//	strProfInfo = PROFILER.getAvgSummary(quickprof::MILLISECONDS);
+	clocktime += dt;  //only for stats
+	
+	//LogO(Ogre::String("Ld: dt ")+fToStr(dt,6,8));
 
-	qtim.update();
-	double dt = qtim.dt;
-	if (!pOgreGame->bLoading)
-		clocktime += dt;
+	Tick(dt);  // do CPU intensive stuff in parallel with the GPU
 	
-	//if (OISB::System::getSingletonPtr() != NULL)
-		//OISB::System::getSingleton().process(dt);
-
-	//if (!pOgreGame->bLoading && !timer.waiting)
-	Tick(pOgreGame->bLoading ? 0.0 : dt);  // do CPU intensive stuff in parallel with the GPU
-	
-	//PROFILER.endCycle();  // not here, in Ogre UpdateHUD
-	
-	displayframe++;
+	displayframe++;  //only for stats
 
 	PROFILER.endBlock(" oneLoop");
 	return true;
 }
 
-///deltat is in seconds
-void GAME::Tick(float deltat)
+///  step game required amount of ticks
+void GAME::Tick(double deltat)
 {
 	const float minfps = 10.0f; //this is the minimum fps the game will run at before it starts slowing down time
 	const unsigned int maxticks = (int) (1.0f / (minfps * framerate));
 	const float maxtime = 1.0/minfps;
 	unsigned int curticks = 0;
 
-	//throw away wall clock time if necessary to keep the framerate above the minimum
+	//  throw away wall clock time if necessary to keep the framerate above the minimum
 	if (deltat > maxtime)
 		deltat = maxtime;
 
 	target_time += deltat;
-	float tickperriod = TickPeriod();
-	//increment game logic by however many tick periods have passed since the last GAME::Tick
+	double tickperriod = TickPeriod();
+
+	//  increment game logic by however many tick periods have passed since the last GAME::Tick
 	while (target_time > tickperriod && curticks < maxticks)
 	{
 		frame++;
-		AdvanceGameLogic();
+		AdvanceGameLogic(deltat > 0.f ? tickperriod : 0.f);
 
 		if (pOgreGame)
-		{
-			pOgreGame->newPoses(/*deltat*/tickperriod);
+			pOgreGame->newPoses(tickperriod);
 
-			//  single thread
-			//if (settings->multi_thr == 0)
-			//	pOgreGame->updatePoses(deltat);
-				
-			/// update all cameras
-			/*if (pOgreGame->carModels.size() > 0 && (!pause || pOgreGame->bRplPlay))  // replay can be paused and needs cam upd
-			{
-				for (int i=0; i < pOgreGame->carModels.size(); ++i)
-				{
-					CarModel* cm = pOgreGame->carModels[i];
-					if (cm->fCam)
-					{
-						cm->fCam->update(framerate, &pOgreGame->carPoses[pOgreGame->iCurPoses[i]][i]);
-						if (settings->multi_thr != 1)
-							cm->fCam->Apply();
-					}
-				}
-			}/**/
-		}
 		curticks++;
 		target_time -= tickperriod;
 	}
 }
 
-///increment game logic by one frame
-void GAME::AdvanceGameLogic()
+///  simulate game by one frame
+//----------------------------------------------------------------------------------------------------------------------------
+void GAME::AdvanceGameLogic(double dt)
 {
-	//eventsystem.ProcessEvents(); //-
-
 	if (track.Loaded())
 	{
 		if (pause && carcontrols_local.first)
@@ -382,10 +234,13 @@ void GAME::AdvanceGameLogic()
 					(*i).dynamics.inFluidsWh[w].clear();
 			}
 
-			collision.Update(TickPeriod(), settings->bltProfilerTxt);
+			collision.Update(dt, settings->bltProfilerTxt);
 			PROFILER.endBlock("-physics");
 			
 			PROFILER.beginBlock("-car-sim");
+			///if (settings->multi_thr == 0)
+			///	OISB::System::getSingleton().process(dt);  // input update  single thread
+
 			int i = 0;
 			for (std::list <CAR>::iterator it = cars.begin(); it != cars.end(); ++it, ++i)
 				UpdateCar(*it, TickPeriod());
@@ -400,100 +255,9 @@ void GAME::AdvanceGameLogic()
 	UpdateForceFeedback(TickPeriod());
 }
 
-///process inputs used only for higher level game functions
-void GAME::ProcessGameInputs()
-{
-	/*if (carcontrols_local.first)
-	{
-		if (carcontrols_local.second.GetInput(CARINPUT::PAUSE) == 1.0)
-		{
-			//cout << "Pause input; changing " << pause << " to " << !pause << endl;
-			pause = !pause;
-		}
-	}*/
-}
 
-void GAME::UpdateTimer()
-{
-	//check for cars doing a lap - only on VDrift tracks (mostly unused)
-	int carId=0;
-	for (std::list <CAR>::iterator i = cars.begin(); i != cars.end(); ++i,++carId)
-	{
-		bool advance = false;
-		int nextsector = 0;
-		if (track.GetSectors() > 0)
-		{
-			nextsector = (i->GetSector() + 1) % track.GetSectors();
-			//cout << "next " << nextsector << ", cur " << i->GetSector() << ", track " << track.GetSectors() << endl;
-			for (int p = 0; p < 4; p++)
-			{
-				if (i->GetCurPatch(p) == track.GetLapSequence(nextsector))
-				{
-					advance = true;
-					//cout << "Drove over new sector " << nextsector << " patch " << i->GetCurPatch(p) << endl;
-					//cout << p << ". " << i->GetCurPatch(p) << ", " << track.GetLapSequence(nextsector) << endl;
-				}
-				//else cout << p << ". " << i->GetCurPatch(p) << ", " << track.GetLapSequence(nextsector) << endl;
-			}
-		}
-
-		if (advance)
-		{
-		    // only count it if the car's current sector isn't -1
-		    // which is the default value when the car is loaded
-			timer.Lap(carId, i->GetSector(), nextsector, (i->GetSector() >= 0), settings->game.trackreverse); 
-			i->SetSector(nextsector);
-		}
-
-		//update how far the car is on the track
-		const BEZIER * curpatch = i->GetCurPatch(0); //find the patch under the front left wheel
-		if (!curpatch)
-            curpatch = i->GetCurPatch(1); //try the other wheel
-        if (curpatch) //only update if car is on track
-        {
-            MATHVECTOR <float, 3> pos = i->GetCenterOfMassPosition();
-            MATHVECTOR <float, 3> back_left, back_right, front_left;
-
-            if (!track.IsReversed())
-            {
-                back_left = MATHVECTOR <float, 3> (curpatch->GetBL()[2], curpatch->GetBL()[0], curpatch->GetBL()[1]);
-                back_right = MATHVECTOR <float, 3> (curpatch->GetBR()[2], curpatch->GetBR()[0], curpatch->GetBR()[1]);
-                front_left = MATHVECTOR <float, 3> (curpatch->GetFL()[2], curpatch->GetFL()[0], curpatch->GetFL()[1]);
-            }
-            else
-            {
-                back_left = MATHVECTOR <float, 3> (curpatch->GetFL()[2], curpatch->GetFL()[0], curpatch->GetFL()[1]);
-                back_right = MATHVECTOR <float, 3> (curpatch->GetFR()[2], curpatch->GetFR()[0], curpatch->GetFR()[1]);
-                front_left = MATHVECTOR <float, 3> (curpatch->GetBL()[2], curpatch->GetBL()[0], curpatch->GetBL()[1]);
-            }
-
-            //float dist_from_back = (back_left - back_right).perp_distance (back_left, pos);
-
-            MATHVECTOR <float, 3> forwardvec = front_left - back_left;
-            MATHVECTOR <float, 3> relative_pos = pos - back_left;
-            float dist_from_back = 0;
-			
-			if (forwardvec.Magnitude() > 0.0001)
-				dist_from_back = relative_pos.dot(forwardvec.Normalize());
-
-			timer.UpdateDistance(carId, curpatch->GetDistFromStart() + dist_from_back);
-			//std::cout << curpatch->GetDistFromStart() << ", " << dist_from_back << endl;
-			//std::cout << curpatch->GetDistFromStart() + dist_from_back << endl;
-        }
-
-		/*info_output << "sector=" << i->GetSector() << ", next=" << track.GetLapSequence(nextsector) << ", ";
-		for (int w = 0; w < 4; w++)
-		{
-			info_output << w << "=" << i->GetCurPatch(w) << ", ";
-		}
-		info_output << endl;*/
-	}
-
-	timer.Tick(TickPeriod());
-	//timer.DebugPrint(info_output);
-}
-
-///send inputs to the car, check for collisions, and so on
+///  send inputs to the car, check for collisions, and so on
+//-----------------------------------------------------------
 void GAME::UpdateCar(CAR & car, double dt)
 {
 	car.Update(dt);
@@ -505,19 +269,12 @@ void GAME::UpdateCarInputs(CAR & car)
 {
     std::vector <float> carinputs(CARINPUT::ALL, 0.0f);
 	bool forceBrake = timer.waiting || timer.pretime > 0.f;  // race countdown
+
     carinputs = carcontrols_local.second.ProcessInput(car.id, forceBrake);
 
-    // multi_thr __ ??
-#if 0
-    std::vector <float> carinputs2(CARINPUT::INVALID, 0.0f);
-    for (int i=0; i < carinputs.size(); ++i)
-		carinputs2.push_back(i < 3 ? 1.f : carinputs[i]);
-	car.HandleInputs(carinputs2, TickPeriod());
-#else
 	car.HandleInputs(carinputs, TickPeriod());
-#endif
-
 }
+
 
 bool GAME::NewGameDoCleanup()
 {
@@ -562,7 +319,7 @@ bool GAME::NewGameDoLoadMisc(float pre_time)
 	return true;
 }
 
-///clean up all game data
+///  clean up all game data
 void GAME::LeaveGame()
 {
 	//ai.clear_cars();
@@ -587,7 +344,7 @@ void GAME::LeaveGame()
 	pause = false;
 }
 
-///add a car, optionally controlled by the local player
+///  add a car, optionally controlled by the local player
 CAR* GAME::LoadCar(const string & carname, const MATHVECTOR <float, 3> & start_position,
 		   const QUATERNION <float> & start_orientation, bool islocal, bool isai, bool isRemote, int idCar)
 {
@@ -711,7 +468,7 @@ void GAME::LoadSaveOptions(OPTION_ACTION action, std::map<string, string> & opti
 	}
 }
 
-///update the game with any new setting changes that have just been made
+//  update the game with any new setting changes that have just been made
 void GAME::ProcessNewSettings()
 {
 	if (carcontrols_local.first)
@@ -849,19 +606,212 @@ void GAME::UpdateDriftScore(CAR & car, double dt)
 	//std::cout << is_drifting << ", " << on_track << ", " << car_angle << endl;
 }
 
-GAME::GAME(std::ostream & info_out, std::ostream & err_out, SETTINGS* pSettings) :
-	settings(pSettings), info_output(info_out), error_output(err_out),
-	frame(0), displayframe(0), clocktime(0), target_time(0),
-	//framerate(0.01f),  ///~  0.004+  o:0.01
-	fps_track(10,0), fps_position(0), fps_min(0), fps_max(0),
-	multithreaded(false), benchmode(false), dumpfps(false),
-	pause(false), debugmode(false), profilingmode(false),
-	particle_timer(0), race_laps(0),
-	track(info_out, err_out), /*tracknode(NULL),*/
-	framerate(1.0 / pSettings->game_fq)
+
+//  break up the input into a vector of strings using the token characters given
+std::vector <string> Tokenize(const string & input, const string & tokens)
 {
-	carcontrols_local.first = NULL;
-	//  sim iv from settings
-	collision.fixedTimestep = 1.0 / pSettings->blt_fq;
-	collision.maxSubsteps = pSettings->blt_iter;
+	std::vector <string> out;
+	
+	unsigned int pos = 0;
+	unsigned int lastpos = 0;
+	
+	while (pos != (unsigned int) string::npos)
+	{
+		pos = input.find_first_of(tokens, pos);
+		string thisstr = input.substr(lastpos,pos-lastpos);
+		if (!thisstr.empty())
+			out.push_back(thisstr);
+		pos = input.find_first_not_of(tokens, pos);
+		lastpos = pos;
+	}
+	
+	return out;
+}
+
+bool GAME::ParseArguments(std::list <string> & args)
+{
+	bool continue_game(true);
+	
+	std::map <string, string> arghelp;
+	std::map <string, string> argmap;
+
+	//generate an argument map
+	for (std::list <string>::iterator i = args.begin(); i != args.end(); ++i)
+	{
+		if ((*i)[0] == '-')
+		{
+			argmap[*i] = "";
+		}
+
+		std::list <string>::iterator n = i;
+		n++;
+		if (n != args.end())
+		{
+			if ((*n)[0] != '-')
+				argmap[*i] = *n;
+		}
+	}
+
+	//check for arguments
+
+	if (argmap.find("-test") != argmap.end())
+	{
+		Test();
+		continue_game = false;
+	}
+	arghelp["-test"] = "Run unit tests.";
+	
+	if (argmap.find("-debug") != argmap.end())
+	{
+		debugmode = true;
+	}
+	///+
+	//debugmode = true;
+	arghelp["-debug"] = "Display car debugging information.";
+
+	if (!argmap["-cartest"].empty())
+	{
+		PATHMANAGER::Init(info_output, error_output);
+		PERFORMANCE_TESTING perftest;
+		perftest.Test(PATHMANAGER::GetCarPath(), argmap["-cartest"], info_output, error_output);
+		continue_game = false;
+	}
+	arghelp["-cartest CAR"] = "Run car performance testing on given CAR.";
+	
+	if (!argmap["-profile"].empty())
+	{
+		PATHMANAGER::SetProfile(argmap["-profile"]);
+	}
+	arghelp["-profile PROFILENAME"] = "Store settings, controls, and records under a separate profile.";
+	
+	///+
+	//if (argmap.find("-profiling") != argmap.end() || argmap.find("-benchmark") != argmap.end())
+	//if (settings->bltLines/*bltProfilerTxt*/)
+	{
+		PROFILER.init(20);
+		profilingmode = true;
+	}
+	arghelp["-profiling"] = "Display game performance data.";
+	
+	if (argmap.find("-dumpfps") != argmap.end())
+	{
+		info_output << "Dumping the frame-rate to log." << endl;
+		dumpfps = true;
+	}
+	arghelp["-dumpfps"] = "Continually dump the framerate to the log.";
+	
+
+	if (argmap.find("-nosound") != argmap.end())
+		sound.DisableAllSound();
+	arghelp["-nosound"] = "Disable all sound.";
+
+	if (argmap.find("-benchmark") != argmap.end())
+	{
+		info_output << "Entering benchmark mode." << endl;
+		benchmode = true;
+	}
+	arghelp["-benchmark"] = "Run in benchmark mode.";
+	
+	
+	arghelp["-help"] = "Display command-line help.";
+	if (argmap.find("-help") != argmap.end() || argmap.find("-h") != argmap.end() || argmap.find("--help") != argmap.end() || argmap.find("-?") != argmap.end())
+	{
+		string helpstr;
+		unsigned int longest = 0;
+		for (std::map <string,string>::iterator i = arghelp.begin(); i != arghelp.end(); ++i)
+			if (i->first.size() > longest)
+				longest = i->first.size();
+		for (std::map <string,string>::iterator i = arghelp.begin(); i != arghelp.end(); ++i)
+		{
+			helpstr.append(i->first);
+			for (unsigned int n = 0; n < longest+3-i->first.size(); n++)
+				helpstr.push_back(' ');
+			helpstr.append(i->second + "\n");
+		}
+		info_output << "Command-line help:\n\n" << helpstr << endl;
+		continue_game = false;
+	}
+
+	return continue_game;
+}
+
+
+void GAME::UpdateTimer()
+{
+	//check for cars doing a lap - only on VDrift tracks (mostly unused)
+	int carId=0;
+	for (std::list <CAR>::iterator i = cars.begin(); i != cars.end(); ++i,++carId)
+	{
+		bool advance = false;
+		int nextsector = 0;
+		if (track.GetSectors() > 0)
+		{
+			nextsector = (i->GetSector() + 1) % track.GetSectors();
+			//cout << "next " << nextsector << ", cur " << i->GetSector() << ", track " << track.GetSectors() << endl;
+			for (int p = 0; p < 4; p++)
+			{
+				if (i->GetCurPatch(p) == track.GetLapSequence(nextsector))
+				{
+					advance = true;
+					//cout << "Drove over new sector " << nextsector << " patch " << i->GetCurPatch(p) << endl;
+					//cout << p << ". " << i->GetCurPatch(p) << ", " << track.GetLapSequence(nextsector) << endl;
+				}
+				//else cout << p << ". " << i->GetCurPatch(p) << ", " << track.GetLapSequence(nextsector) << endl;
+			}
+		}
+
+		if (advance)
+		{
+		    // only count it if the car's current sector isn't -1
+		    // which is the default value when the car is loaded
+			timer.Lap(carId, i->GetSector(), nextsector, (i->GetSector() >= 0), settings->game.trackreverse); 
+			i->SetSector(nextsector);
+		}
+
+		//update how far the car is on the track
+		const BEZIER * curpatch = i->GetCurPatch(0); //find the patch under the front left wheel
+		if (!curpatch)
+            curpatch = i->GetCurPatch(1); //try the other wheel
+        if (curpatch) //only update if car is on track
+        {
+            MATHVECTOR <float, 3> pos = i->GetCenterOfMassPosition();
+            MATHVECTOR <float, 3> back_left, back_right, front_left;
+
+            if (!track.IsReversed())
+            {
+                back_left = MATHVECTOR <float, 3> (curpatch->GetBL()[2], curpatch->GetBL()[0], curpatch->GetBL()[1]);
+                back_right = MATHVECTOR <float, 3> (curpatch->GetBR()[2], curpatch->GetBR()[0], curpatch->GetBR()[1]);
+                front_left = MATHVECTOR <float, 3> (curpatch->GetFL()[2], curpatch->GetFL()[0], curpatch->GetFL()[1]);
+            }
+            else
+            {
+                back_left = MATHVECTOR <float, 3> (curpatch->GetFL()[2], curpatch->GetFL()[0], curpatch->GetFL()[1]);
+                back_right = MATHVECTOR <float, 3> (curpatch->GetFR()[2], curpatch->GetFR()[0], curpatch->GetFR()[1]);
+                front_left = MATHVECTOR <float, 3> (curpatch->GetBL()[2], curpatch->GetBL()[0], curpatch->GetBL()[1]);
+            }
+
+            //float dist_from_back = (back_left - back_right).perp_distance (back_left, pos);
+
+            MATHVECTOR <float, 3> forwardvec = front_left - back_left;
+            MATHVECTOR <float, 3> relative_pos = pos - back_left;
+            float dist_from_back = 0;
+			
+			if (forwardvec.Magnitude() > 0.0001)
+				dist_from_back = relative_pos.dot(forwardvec.Normalize());
+
+			timer.UpdateDistance(carId, curpatch->GetDistFromStart() + dist_from_back);
+			//std::cout << curpatch->GetDistFromStart() << ", " << dist_from_back << endl;
+			//std::cout << curpatch->GetDistFromStart() + dist_from_back << endl;
+        }
+
+		/*info_output << "sector=" << i->GetSector() << ", next=" << track.GetLapSequence(nextsector) << ", ";
+		for (int w = 0; w < 4; w++)
+		{
+			info_output << w << "=" << i->GetCurPatch(w) << ", ";
+		}
+		info_output << endl;*/
+	}
+
+	timer.Tick(TickPeriod());
+	//timer.DebugPrint(info_output);
 }

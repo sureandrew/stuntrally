@@ -41,13 +41,21 @@ void MasterClient::updateGame(const protocol::GameInfo &game, std::string passwo
 {
 	{
 		boost::mutex::scoped_lock lock(m_mutex);
+		uint32_t id = m_game.id;
 		m_game = game;
+		m_game.id = id;
 		m_password = password;
 		m_sendUpdates = true;
 	}
 	// Start updater thread if it is not already running
 	if (!m_gameInfoSenderThread.joinable())
 		m_gameInfoSenderThread = boost::thread(boost::bind(&MasterClient::gameInfoSenderThread, boost::ref(*this)));
+}
+
+void MasterClient::signalStart()
+{
+	if (m_connectionOk)
+		m_client.broadcast(char(protocol::START_GAME) + std::string(" "), net::PACKET_RELIABLE);
 }
 
 void MasterClient::terminate()

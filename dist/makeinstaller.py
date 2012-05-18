@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 
+# ------- !!!  this is old ver, use installer.nsi instead  !!! ---------
 app = 'StuntRally'
 version = '1.4'
 

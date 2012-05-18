@@ -32,7 +32,9 @@ using namespace Ogre;
 
 void CarModel::setVisible(bool vis)
 {
+	mbVisible = vis;
 	//if (pMainNode->getVisible() == vis)  return;  //opt..
+	hideTime = 0.f;
 	pMainNode->setVisible(vis);
 	for (int w=0; w < 4; ++w)
 		ndWh[w]->setVisible(vis);
@@ -125,7 +127,7 @@ void CarModel::UpdTrackPercent()
 //-------------------------------------------------------------------------------------------------------
 //  Update
 //-------------------------------------------------------------------------------------------------------
-void CarModel::Update(PosInfo& posInfo, float time)
+void CarModel::Update(PosInfo& posInfo, PosInfo& posInfoCam, float time)
 {	
 	//if (!posInfo.bNew)  return;  // new only ?
 	//posInfo.bNew = false;
@@ -139,8 +141,8 @@ void CarModel::Update(PosInfo& posInfo, float time)
 	pMainNode->setOrientation(posInfo.rot);
 
 	//  set camera view
-	if (fCam && pSet->multi_thr == 1)
-		fCam->Apply(posInfo);
+	if (fCam)
+		fCam->Apply(posInfoCam/*posInfo*/);
 
 
 	//  upd rotY for minimap
@@ -244,12 +246,14 @@ void CarModel::Update(PosInfo& posInfo, float time)
 			if (w < 2)  pb[w]->setSpeedFactor(1.f);  }
 			if (pflW[w])  {
 				pflW[w]->setSpeedFactor(1.f);  pflM[w]->setSpeedFactor(1.f);  pflMs[w]->setSpeedFactor(1.f);  }
+			if (ph)  ph->setSpeedFactor(1.f);
 		}else{
 			if (pd[w])  {	//  stop par sys
 				pd[w]->setSpeedFactor(0.f);  ps[w]->setSpeedFactor(0.f);  pm[w]->setSpeedFactor(0.f);
 			if (w < 2)  pb[w]->setSpeedFactor(0.f);  }
 			if (pflW[w])  {
 				pflW[w]->setSpeedFactor(0.f);  pflM[w]->setSpeedFactor(0.f);  pflMs[w]->setSpeedFactor(0.f);  }
+			if (ph)  ph->setSpeedFactor(0.f);
 			//if (whTrl[w])
 			//	whTrl[w]->setFade 0
 		}
@@ -376,10 +380,9 @@ void CarModel::UpdateKeys()
 {
 	if (!pCar)  return;
 
-	///  go to last checkp.
+	///  goto last checkp - reset cam
 	if (pCar->bLastChk && !bLastChkOld)
 	{
-		pCar->ResetPos(false);
 		if (fCam)
 			fCam->first = true;
 		else
@@ -397,7 +400,7 @@ void CarModel::UpdateKeys()
 		else
 		{
 			int visMask = 255;
-			pApp->roadUpCnt = 0;
+			pApp->roadUpdTm = 1.f;
 
 			if (fCam)
 			{	fCam->Next(pCar->iCamNext < 0, pApp->shift);

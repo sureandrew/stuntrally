@@ -134,14 +134,15 @@ void App::InitInputGui()
 
 		if (!playerTab)
 		{	y = yc+2*ya;  //  camera infos
-			CreateText(20,y, 280,24, "txtcam1", TR("#B0D8F8#{InputMapNextCamera} / #{InputMapPrevCamera}"));  y+=2*ya;
-			CreateText(40,y, 280,24, "txtcam2", TR("#B0D8F8#{InputCameraTxt1}"));  y+=2*ya;
-			CreateText(40,y, 280,24, "txtcam3", TR("#B0D8F8#{InputCameraTxt2}"));  y+=3*ya;
+			CreateText(20,y, 280,24, "txtcam1", TR("#A0D0F0#{InputMapNextCamera} / #{InputMapPrevCamera}"));  y+=2*ya;
+			CreateText(40,y, 280,24, "txtcam2", TR("#A0D0F0#{InputCameraTxt1}"));  y+=2*ya;
+			CreateText(40,y, 280,24, "txtcam3", TR("#A0D0F0#{InputCameraTxt2}"));  y+=3*ya;
 			//  replay controls info text
-			CreateText(20,y, 500,24, "txtrpl1", TR("#C0E0FF#{InputRplCtrl0}"));  y+=2*ya;
-			CreateText(40,y, 500,24, "txtrpl2", TR("#90C0FF#{InputRplCtrl1}"));  y+=2*ya;
-			CreateText(40,y, 500,24, "txtrpl3", TR("#90C0FF#{InputRplCtrl2}"));  y+=2*ya;
-			CreateText(40,y, 500,24, "txtrpl4", TR("#90C0FF#{InputRplCtrl3}"));  y+=2*ya;
+			CreateText(20,y, 500,24, "txtrpl1", TR("#A0D0F0#{InputRplCtrl0}"));  y+=2*ya;
+			CreateText(40,y, 500,24, "txtrpl2", TR("#80B0F0#{InputRplCtrl1}"));  y+=2*ya;
+			CreateText(40,y, 500,24, "txtrpl3", TR("#80B0F0#{InputRplCtrl2}"));  y+=2*ya;
+			CreateText(40,y, 500,24, "txtrpl4", TR("#80B0F0#{InputRplCtrl3}"));  y+=2*ya;
+			CreateText(40,y, 500,24, "txtrpl5", TR("#60A0D0#{InputRplCtrl4}"));  y+=2*ya;
 		}
 		
 		///  Actions  ------------------------------------------------
@@ -348,12 +349,13 @@ void App::inputDetailBtn(WP sender)
 	OISB::Action* action = schema->mActions[actionName];  if (!action)  return;//
 	OISB::AnalogAxisAction* act = (OISB::AnalogAxisAction*)action;  if (!act)  return;//
 	actDetail = act;
+	if (panInputDetail)  panInputDetail->setVisible(false);
 
 	if (edInputMin)  edInputMin->setCaption(toStr(act->getProperty<OISB::Real>("MinValue")));
 	if (edInputMax)  edInputMax->setCaption(toStr(act->getProperty<OISB::Real>("MaxValue")));
 	if (edInputMul)  edInputMul->setCaption(toStr(act->getProperty<OISB::Real>("InverseMul")));
-	if (edInputReturn)      edInputReturn->setCaption(toStr(act->getProperty<OISB::Real>("IncSpeed")));        // =DecSpeed
-	if (edInputIncrease)  edInputIncrease->setCaption(toStr(act->getProperty<OISB::Real>("ReturnIncSpeed")));  // =ReturnDecSpeed
+	if (edInputReturn)    edInputReturn->setCaption(toStr(act->getProperty<OISB::Real>("ReturnIncSpeed")));        // =ReturnDecSpeed
+	if (edInputIncrease)  edInputIncrease->setCaption(toStr(act->getProperty<OISB::Real>("IncSpeed")));  // =DecSpeed
 	if (cmbInpDetSet)  cmbInpDetSet->setIndexSelected(0);
 }
 
@@ -391,7 +393,7 @@ void App::comboInputPreset(MyGUI::ComboBoxPtr cmb, size_t val)
 
 void App::comboInputKeyAllPreset(MyGUI::ComboBoxPtr cmb, size_t val)
 {
-	if (val == 0)  return;
+	if (val == 0)  return;  cmb->setIndexSelected(0);
 	TabPtr tPlr = mGUI->findWidget<Tab>("InputTab",false);  if (!tPlr)  return;
 	int id = tPlr->getIndexSelected();  if (id == 0)  return;
 	String schemaName = "Player"+toStr(id);
@@ -401,8 +403,6 @@ void App::comboInputKeyAllPreset(MyGUI::ComboBoxPtr cmb, size_t val)
 	const Real speeds[3] = {3,4,5},  // presets
 			speedsRet[3] = {3,4,5};
 	Real vInc = speeds[val-1], vRet = speedsRet[val-1];
-	//edInputReturn->setCaption(toStr(vRet));  //?
-	//edInputIncrease->setCaption(toStr(vInc));
 
 	OISB::ActionSchema* schema = OISB::System::getSingleton().mActionSchemas[schemaName];  if (!schema)  return;
 	for (int i=0; i < numActs; ++i)
@@ -413,7 +413,9 @@ void App::comboInputKeyAllPreset(MyGUI::ComboBoxPtr cmb, size_t val)
 		act->setProperty("ReturnDecSpeed",vRet);	act->setProperty("DecSpeed",vInc);
 		act->setProperty("ReturnIncSpeed",vRet);	act->setProperty("IncSpeed",vInc);
 	}
-	cmb->setIndexSelected(0);
+	if (!actDetail)  return;  // update edit vals
+	if (edInputReturn)      edInputReturn->setCaption(toStr(actDetail->getProperty<OISB::Real>("IncSpeed")));
+	if (edInputIncrease)  edInputIncrease->setCaption(toStr(actDetail->getProperty<OISB::Real>("ReturnIncSpeed")));
 }
 
 

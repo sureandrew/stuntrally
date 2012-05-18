@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION"
 "Report-Msgid-Bugs-To: "
-"POT-Creation-Date: 2012-04-01 16:07+0300"
+"POT-Creation-Date: 2012-05-13 22:35+0300"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>"
 "Language-Team: LANGUAGE <LL@li.org>"
@@ -37,12 +37,12 @@ msgctxt "TipDustSize"
 msgid "Dust particles size."
 msgstr ""
 
-msgctxt "InputMapShowOptions"
-msgid "Show options"
-msgstr ""
-
 msgctxt "TipGrassSwayDistr"
 msgid "Grass sway effect distribution (how random)."
+msgstr ""
+
+msgctxt "GraphicsAll_VeryHigh"
+msgid "Very High"
 msgstr ""
 
 msgctxt "InpSet_AxisFull"
@@ -65,8 +65,8 @@ msgctxt "TipAutoGearbox"
 msgid "Uncheck for manual gears changing."
 msgstr ""
 
-msgctxt "InputHeaderTxt1"
-msgid "Action"
+msgctxt "LS_MISC"
+msgid "Finishing"
 msgstr ""
 
 msgctxt "InputHeaderTxt2"
@@ -137,12 +137,12 @@ msgctxt "TipVegetGroups"
 msgid "Vegetation model groups (recommended use 4-6), affects performance."
 msgstr ""
 
-msgctxt "TerNormal"
-msgid "Normal"
+msgctxt "Graphs"
+msgid "Graphs"
 msgstr ""
 
-msgctxt "LS_TRACK"
-msgid "Loading track"
+msgctxt "TerNormal"
+msgid "Normal"
 msgstr ""
 
 msgctxt "NeedNewGame"
@@ -183,6 +183,10 @@ msgstr ""
 
 msgctxt "MinimapUpdSkip"
 msgid "Minimap update skip"
+msgstr ""
+
+msgctxt "InputObjectsIns"
+msgid "Ins - insert new, at cursor"
 msgstr ""
 
 msgctxt "GraphicsAll_Low"
@@ -257,8 +261,8 @@ msgctxt "InputFluidsUpdate"
 msgid "F10  - update depth map, after terrain deform near shore"
 msgstr ""
 
-msgctxt "LS_MISC"
-msgid "Finishing"
+msgctxt "InputHeaderTxt1"
+msgid "Action"
 msgstr ""
 
 msgctxt "DepthOfField"
@@ -271,6 +275,10 @@ msgstr ""
 
 msgctxt "ViewFront"
 msgid "View Front"
+msgstr ""
+
+msgctxt "InputObjectsScale"
+msgid "alt-LMB - scale   alt-RMB - scale Y only"
 msgstr ""
 
 msgctxt "TipTerLNoiseOnly"
@@ -453,6 +461,14 @@ msgctxt "CopySource"
 msgid "Set as copy source"
 msgstr ""
 
+msgctxt "CarCrash"
+msgid "Car Crash"
+msgstr ""
+
+msgctxt "LS_OBJS"
+msgid "Loading Objects"
+msgstr ""
+
 msgctxt "TreeRoadDist"
 msgid "Trees to road dist."
 msgstr ""
@@ -481,8 +497,8 @@ msgctxt "UnitKm"
 msgid "km"
 msgstr ""
 
-msgctxt "LANG_FR"
-msgid "Français"
+msgctxt "InputRoadHeight"
+msgid "- change height"
 msgstr ""
 
 msgctxt "BackMenu"
@@ -581,12 +597,12 @@ msgctxt "Wireframe"
 msgid "Wireframe"
 msgstr ""
 
-msgctxt "ChangeTrack"
-msgid "Change Track"
-msgstr ""
-
 msgctxt "Score"
 msgid "Score"
+msgstr ""
+
+msgctxt "Suspension"
+msgid "Suspension"
 msgstr ""
 
 msgctxt "TerrainSize"
@@ -629,12 +645,12 @@ msgctxt "ReflMode_single"
 msgid "Single"
 msgstr ""
 
-msgctxt "InputRoadHeight"
-msgid "- change height"
-msgstr ""
-
 msgctxt "InputMinVal"
 msgid "Min. Value"
+msgstr ""
+
+msgctxt "RoadWallFullCollis"
+msgid "Road wall full collision"
 msgstr ""
 
 msgctxt "Always"
@@ -663,6 +679,14 @@ msgstr ""
 
 msgctxt "TipCarsList"
 msgid "Cars list, click to select (and see image). Press [Change car] and then [New Game] to drive with it."
+msgstr ""
+
+msgctxt "FluidSplash"
+msgid "Fluid Splash"
+msgstr ""
+
+msgctxt "InputMapNextCamera"
+msgid "Next Camera"
 msgstr ""
 
 msgctxt "Model"
@@ -773,10 +797,6 @@ msgctxt "TerrainError"
 msgid "Terrain error"
 msgstr ""
 
-msgctxt "LANG_EN"
-msgid "English"
-msgstr ""
-
 msgctxt "NetMasterProtocolError"
 msgid "Incompatible protocol version - update Stunt Rally or contact server administrator."
 msgstr ""
@@ -857,10 +877,6 @@ msgctxt "InputMapNextTab"
 msgid "Next tab"
 msgstr ""
 
-msgctxt "Environment"
-msgid "Environment"
-msgstr ""
-
 msgctxt "Layer"
 msgid "Layer"
 msgstr ""
@@ -882,7 +898,7 @@ msgid "Length dim."
 msgstr ""
 
 msgctxt "InputStartLMB"
-msgid "LMB - move  RMB - height"
+msgid "ctrl-LMB - place   LMB - move   RMB - height"
 msgstr ""
 
 msgctxt "TipRenameTrk"
@@ -989,8 +1005,8 @@ msgctxt "SetCamTo"
 msgid "Set camera to"
 msgstr ""
 
-msgctxt "InputPressButtonTip"
-msgid "Press a button to see its number"
+msgctxt "RplMaxNumViewports"
+msgid "Max. number of viewports (see less, for more player replays)"
 msgstr ""
 
 msgctxt "SingleRace"
@@ -1019,6 +1035,10 @@ msgstr ""
 
 msgctxt "max"
 msgid "max"
+msgstr ""
+
+msgctxt "InputObjectsMove"
+msgid "LMB - move   RMB - height"
 msgstr ""
 
 msgctxt "Stage"
@@ -1073,10 +1093,6 @@ msgctxt "Rename"
 msgid "Rename"
 msgstr ""
 
-msgctxt "InputFluidsRot"
-msgid "MMB - rotate yaw"
-msgstr ""
-
 msgctxt "InputRoadChkFirst"
 msgid "0   - set checkpoint as first"
 msgstr ""
@@ -1113,8 +1129,8 @@ msgctxt "RplAutoRec"
 msgid "Auto record replay"
 msgstr ""
 
-msgctxt "Reflections"
-msgid "Reflections"
+msgctxt "Shaders"
+msgid "Shaders"
 msgstr ""
 
 msgctxt "PipeMaterials"
@@ -1177,6 +1193,10 @@ msgctxt "InputRoadPitch"
 msgid "- rotate pitch* / scale sel."
 msgstr ""
 
+msgctxt "InputObjectsPrevNext"
+msgid "PgUp,PgDn (or Wheel) - previous/next object"
+msgstr ""
+
 msgctxt "TimesBar"
 msgid "Times bar"
 msgstr ""
@@ -1202,7 +1222,7 @@ msgid "most work also on selection"
 msgstr ""
 
 msgctxt "InputTerHeight"
-msgid "E - Height set (RMB change height value)"
+msgid "E - Height set  (RMB change height value)"
 msgstr ""
 
 msgctxt "TipLTrMaxTerAng"
@@ -1261,8 +1281,8 @@ msgctxt "Road"
 msgid "Road"
 msgstr ""
 
-msgctxt "distance"
-msgid "distance"
+msgctxt "FluidCont"
+msgid "Fluid Cont."
 msgstr ""
 
 msgctxt "TrackAutoLoad"
@@ -1365,10 +1385,6 @@ msgctxt "min"
 msgid "min"
 msgstr ""
 
-msgctxt "LANG_RO"
-msgid "Română"
-msgstr ""
-
 msgctxt "InputStartAltMMB"
 msgid "alt-MMB - reset rotation"
 msgstr ""
@@ -1385,8 +1401,8 @@ msgctxt "Finished"
 msgid "Finished"
 msgstr ""
 
-msgctxt "LANG_RU"
-msgid "Русский"
+msgctxt "LTrMaxTerAng"
+msgid "max terrain Angle"
 msgstr ""
 
 msgctxt "InputMapRestartGame"
@@ -1397,8 +1413,8 @@ msgctxt "Graphics"
 msgid "Graphics"
 msgstr ""
 
-msgctxt "InputMapNextCamera"
-msgid "Next Camera"
+msgctxt "InputMapShowOptions"
+msgid "Show options"
 msgstr ""
 
 msgctxt "CarClrRandom"
@@ -1489,8 +1505,8 @@ msgctxt "MinimapTerrain"
 msgid "Terrain"
 msgstr ""
 
-msgctxt "MinimapRotate"
-msgid "Rotate"
+msgctxt "CameraAutoTilt"
+msgid "Camera auto tilt on slopes"
 msgstr ""
 
 msgctxt "TrackHeightDiff"
@@ -1579,6 +1595,10 @@ msgstr ""
 
 msgctxt "ShowPictures"
 msgid "Show pictures while loading"
+msgstr ""
+
+msgctxt "distance"
+msgid "distance"
 msgstr ""
 
 msgctxt "TrackAvgSpeed"
@@ -1681,6 +1701,10 @@ msgctxt "TireTrails"
 msgid "Tire Trails"
 msgstr ""
 
+msgctxt "InputRplCtrl4"
+msgid "K, L - change camera view to other player"
+msgstr ""
+
 msgctxt "TipGrassPatchLengthMin"
 msgid "Minimal grass patch length."
 msgstr ""
@@ -1773,6 +1797,10 @@ msgctxt "TBLap"
 msgid "Lap"
 msgstr ""
 
+msgctxt "InputObjectsMode"
+msgid "X - edit Objects"
+msgstr ""
+
 msgctxt "TipGrassVisDist"
 msgid "Visibility distance for grass pages."
 msgstr ""
@@ -1801,16 +1829,8 @@ msgctxt "InputToggleCam"
 msgid "Tab - camera / edit mode toggle"
 msgstr ""
 
-msgctxt "LTrMaxTerAng"
-msgid "max terrain Angle"
-msgstr ""
-
 msgctxt "InputStartAltLMB"
-msgid "alt-LMB - rotate  alt-RMB - pitch"
-msgstr ""
-
-msgctxt "LANG_DE"
-msgid "Deutsch"
+msgid "alt-LMB - rotate   alt-RMB - pitch"
 msgstr ""
 
 msgctxt "InputRoadAngSnap"
@@ -1851,6 +1871,10 @@ msgstr ""
 
 msgctxt "RplTime"
 msgid "Time"
+msgstr ""
+
+msgctxt "MinimapRotate"
+msgid "Rotate"
 msgstr ""
 
 msgctxt "InputRoadLMB"
@@ -1985,12 +2009,24 @@ msgctxt "TipRearThrottleInverse"
 msgid "Inverse throttle and brake function in rear gear."
 msgstr ""
 
+msgctxt "LS_ROAD"
+msgid "Loading Road"
+msgstr ""
+
 msgctxt "RoadPoint"
 msgid "Road Point"
 msgstr ""
 
+msgctxt "CarStartPos"
+msgid "Car Start Pos"
+msgstr ""
+
 msgctxt "TerLHMax"
 msgid "Height Max"
+msgstr ""
+
+msgctxt "InputObjectsRot"
+msgid "MMB - rotate Y"
 msgstr ""
 
 msgctxt "LoadingDesc"
@@ -2069,10 +2105,6 @@ msgctxt "RplRecTime"
 msgid "Recorded   time"
 msgstr ""
 
-msgctxt "TipSunSpecular"
-msgid "Sun light specular (shiny) color. R G B components 0 to 1 (eg. 0.6 0.6 0.6)"
-msgstr ""
-
 msgctxt "TipModelDens"
 msgid "How often model will appear on track area."
 msgstr ""
@@ -2095,6 +2127,10 @@ msgstr ""
 
 msgctxt "InputRoadMerge"
 msgid "M - toggle road merge segs (for test)"
+msgstr ""
+
+msgctxt "Objects"
+msgid "Objects"
 msgstr ""
 
 msgctxt "set1"
@@ -2161,8 +2197,8 @@ msgctxt "SplitVertically"
 msgid "Split Vertically"
 msgstr ""
 
-msgctxt "Shaders"
-msgid "Shaders"
+msgctxt "Reflections"
+msgid "Reflections"
 msgstr ""
 
 msgctxt "dust"
@@ -2199,6 +2235,10 @@ msgstr ""
 
 msgctxt "FinishedCommaPlace"
 msgid "finished, place"
+msgstr ""
+
+msgctxt "InputObjectsDel"
+msgid "Del - delete current"
 msgstr ""
 
 msgctxt "Tools"
@@ -2441,6 +2481,10 @@ msgctxt "UnitMph"
 msgid "mph"
 msgstr ""
 
+msgctxt "InputObjectsType"
+msgid "[,]  - change object type"
+msgstr ""
+
 msgctxt "ColHue"
 msgid "Color - Hue"
 msgstr ""
@@ -2561,6 +2605,10 @@ msgctxt "RplAlpha"
 msgid "Transparent ghost"
 msgstr ""
 
+msgctxt "InputTerFilter"
+msgid "F - Filter  (remove noise)"
+msgstr ""
+
 msgctxt "No"
 msgid "No"
 msgstr ""
@@ -2573,8 +2621,8 @@ msgctxt "RplSave"
 msgid "Save"
 msgstr ""
 
-msgctxt "LANG_PL"
-msgid "Polski"
+msgctxt "Environment"
+msgid "Environment"
 msgstr ""
 
 msgctxt "GraphicsAll_High"
@@ -2742,11 +2790,11 @@ msgid "Bullet debug"
 msgstr ""
 
 msgctxt "InputTerSmooth"
-msgid "S - Smooth"
+msgid "S - Smooth  (flatten)"
 msgstr ""
 
-msgctxt "TipChangeTrack"
-msgid "Sets current track to that selected in list. Press [New Game] to start it after."
+msgctxt "TipSunSpecular"
+msgid "Sun light specular (shiny) color. R G B components 0 to 1 (eg. 0.6 0.6 0.6)"
 msgstr ""
 
 msgctxt "ColSat"
@@ -2829,6 +2877,10 @@ msgctxt "NetJoinGame"
 msgid "Join game"
 msgstr ""
 
+msgctxt "LS_TREES"
+msgid "Loading Trees"
+msgstr ""
+
 msgctxt "InputMapBoost"
 msgid "Boost"
 msgstr ""
@@ -2857,12 +2909,12 @@ msgctxt "Color"
 msgid "color"
 msgstr ""
 
-msgctxt "GraphicsAll_VeryHigh"
-msgid "Very High"
+msgctxt "CarScrap"
+msgid "Car Scrap"
 msgstr ""
 
-msgctxt "LANG_FI"
-msgid "Suomi"
+msgctxt "InputPressButtonTip"
+msgid "Press a button to see its number"
 msgstr ""
 
 msgctxt "TipTerLAngMax"

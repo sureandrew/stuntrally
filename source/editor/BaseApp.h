@@ -22,6 +22,7 @@
 #include <MyGUI_OgrePlatform.h>
 
 namespace boost { class thread; }
+namespace MyGUI { class OgreD3D11Platform; }
 
 
 class BaseApp :
@@ -133,17 +134,33 @@ protected:
 	bool bMoveCam;	int mx,my,mz;  double mDTime;
 	Ogre::Real mRotX, mRotY,  mRotKX, mRotKY,  moveMul, rotMul;
 	Ogre::Vector3 mTrans;
-	enum ED_MODE {  ED_Deform=0, ED_Smooth, ED_Height, /*ED_Paint,*/ ED_Road, ED_Start, ED_PrvCam, ED_Fluids, ED_ALL  }
-		edMode,edModeOld;
+
+	enum ED_MODE
+	{	ED_Deform=0, ED_Smooth, ED_Height, ED_Filter, /*ED_Paint,*/
+		ED_Road, ED_Start, ED_PrvCam, ED_Fluids, ED_Objects, ED_ALL
+	} edMode,edModeOld;
 
 
 	///  Gui
 	bool bGuiFocus;  // gui shown
-	MyGUI::Gui* mGUI;	MyGUI::OgrePlatform* mPlatform;
-	MyGUI::WidgetPtr mWndOpts, mWndBrush, mWndCam,
-		mWndRoadCur, mWndRoadStats, mWndFluids;  // gui windows
-	MyGUI::TabPtr mWndTabs;
-	MyGUI::VectorWidgetPtr vwGui;
+	MyGUI::Gui* mGUI;
+	#if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
+	MyGUI::OgreD3D11Platform* mPlatform;
+	#else
+	MyGUI::OgrePlatform* mPlatform;
+	#endif
+	MyGUI::WidgetPtr  // tool windows
+		mWndBrush, mWndCam, mWndStart,
+		mWndRoadCur, mWndRoadStats,
+		mWndFluids, mWndObjects;
+	MyGUI::VectorWidgetPtr vwGui;  // all widgets to destroy
+
+	//  main menu
+	enum WND_Types {  WND_Edit=0, WND_Help, WND_Options, WND_ALL  };  // pSet->inMenu
+	MyGUI::WidgetPtr mWndMain,mWndEdit,mWndHelp,mWndOpts;  // menu, windows
+	MyGUI::TabPtr mWndTabsEdit,mWndTabsHelp,mWndTabsOpts;  // main tabs on windows
+	MyGUI::WidgetPtr mWndMainPanels[WND_ALL];  MyGUI::ButtonPtr mWndMainBtns[WND_ALL];
+
 	
 public:
 	inline bool bCam()  {  return  bMoveCam && !bGuiFocus;  }
